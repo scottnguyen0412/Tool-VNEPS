@@ -4,7 +4,32 @@ import random
 import pandas as pd
 from playwright.sync_api import sync_playwright
 
-def run():
+def run(output_path=None, max_pages=None):
+    # Handle default arguments if not provided (CLI usage fallback)
+    if output_path is None and max_pages is None:
+        # User inputs for CLI mode
+        print("--- Cấu hình Tool Scraping ---")
+        output_path = input("Nhập tên file lưu (mặc định 'investors_data_detailed.xlsx'): ").strip()
+        if not output_path:
+            output_path = "investors_data_detailed.xlsx"
+        
+        limit_input = input("Nhập số trang muốn cào (nhập 'all' hoặc để trống để cào hết): ").strip()
+        if not limit_input or limit_input.lower() == 'all':
+            max_pages = float('inf')
+        else:
+            try:
+                max_pages = int(limit_input)
+            except ValueError:
+                print("Đầu vào không hợp lệ. Mặc định cào tất cả.")
+                max_pages = float('inf')
+
+    # Ensure extension
+    if not output_path.endswith(".xlsx"):
+        output_path += ".xlsx"
+    
+    if max_pages is None: # explicit None passed
+         max_pages = float('inf')
+            
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         context = browser.new_context(
@@ -45,8 +70,10 @@ def run():
         all_data = []
         page_num = 1
         
-        while True:
+        while page_num <= max_pages:
             print(f"Processing Page {page_num}...")
+            if max_pages != float('inf'):
+                 print(f"(Target: {max_pages} pages)")
             
             # Re-query items to get count
             # Note: In SPAs, elements get stale, so we shouldn't store the element handles across navigations.
@@ -154,11 +181,12 @@ def run():
             # Save progress after each page
             try:
                 df = pd.DataFrame(all_data)
-                df.to_excel("investors_data_detailed.xlsx", index=False)
-                print("  Page completed. Progress saved to excel.")
+                df.to_excel(output_path, index=False)
+                print(f"  Page completed. Progress saved to {output_path}.")
             except PermissionError:
-                print("  Error: Could not save to 'investors_data_detailed.xlsx'. Is it open? Saving to 'investors_data_detailed_backup.xlsx' instead.")
-                df.to_excel("investors_data_detailed_backup.xlsx", index=False)
+                backup_name = output_path.replace(".xlsx", "_backup.xlsx")
+                print(f"  Error: Could not save to '{output_path}'. Is it open? Saving to '{backup_name}' instead.")
+                df.to_excel(backup_name, index=False)
             except Exception as e:
                 print(f"  Error saving excel: {e}")
 
