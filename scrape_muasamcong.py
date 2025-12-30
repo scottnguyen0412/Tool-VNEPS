@@ -4,6 +4,12 @@ import random
 import pandas as pd
 from playwright.sync_api import sync_playwright
 
+import os
+
+# Fix for PyInstaller: Tell Playwright to look for browsers in the system default location
+# instead of looking inside the temporary _MEI folder.
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
+
 def run(output_path=None, max_pages=None):
     # Handle default arguments if not provided (CLI usage fallback)
     if output_path is None and max_pages is None:
@@ -29,9 +35,40 @@ def run(output_path=None, max_pages=None):
     
     if max_pages is None: # explicit None passed
          max_pages = float('inf')
+
+    # Load existing data to avoid duplicates
+    processed_items = set()
+    all_data = []
+    
+    if os.path.exists(output_path):
+        try:
+            print(f"File '{output_path}' tồn tại. Đang đọc dữ liệu cũ để tránh trùng lặp...")
+            existing_df = pd.read_excel(output_path)
+            if "Entity Name" in existing_df.columns:
+                processed_items = set(existing_df["Entity Name"].dropna().astype(str).str.strip())
+                # Load all fields to keep history if we strictly append, 
+                # but here we usually overwrite the file with all_data. 
+                # So we should populate all_data with existing rows.
+                all_data = existing_df.to_dict('records')
+            print(f"Đã tải {len(processed_items)} nhà đầu tư đã cào trước đó.")
+        except Exception as e:
+            print(f"Cảnh báo: Không đọc được file cũ ({e}). Sẽ tạo mới.")
+
             
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = None
+        # Try using system browsers (Chrome/Edge) to avoid path issues in EXE
+        try:
+            print("Đang khởi động Google Chrome...")
+            browser = p.chromium.launch(headless=False, channel="chrome")
+        except Exception:
+            try:
+                print("Không tìm thấy Chrome, đang thử Microsoft Edge...")
+                browser = p.chromium.launch(headless=False, channel="msedge")
+            except Exception:
+                print("Không tìm thấy Edge, đang thử trình duyệt tích hợp (có thể lỗi trong EXE)...")
+                browser = p.chromium.launch(headless=False)
+                
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             viewport={"width": 1280, "height": 720},
@@ -67,7 +104,6 @@ def run(output_path=None, max_pages=None):
             browser.close()
             return
 
-        all_data = []
         page_num = 1
         
         while page_num <= max_pages:
@@ -91,16 +127,31 @@ def run(output_path=None, max_pages=None):
                 
                 # Retry mechanism for stale elements
                 retry = 0
+                skipped = False
                 while retry < 3:
                     try:
                         # Locate item again
                         item = page.locator(item_selector).nth(i)
+                        
+                        # Check for duplicate before clicking
+                        try:
+                            item_title = item.inner_text().strip()
+                            if item_title in processed_items:
+                                print(f"    Skipping duplicate: {item_title}")
+                                skipped = True
+                                break 
+                        except:
+                            pass
+                        
                         item.click(timeout=5000)
                         break
                     except Exception as e:
                         print(f"    Error clicking item: {e}. Retrying...")
                         time.sleep(1)
                         retry += 1
+                
+                if skipped:
+                    continue
                 
                 if retry == 3:
                      print("    Failed to click item. Skipping.")
@@ -113,7 +164,13 @@ def run(output_path=None, max_pages=None):
                 except:
                     print("    Detail page load failed (Back button not found). Trying to go back manually.")
                     page.go_back()
-                    page.wait_for_selector(item_selector)
+                    # Wait for list to reappear, with retry
+                    try:
+                         page.wait_for_selector(item_selector, timeout=15000)
+                    except:
+                         print("List not appearing after back. Reloading page...")
+                         page.reload()
+                         page.wait_for_selector(item_selector, timeout=30000)
                     continue
 
                 # Extract Detail Data
@@ -166,6 +223,10 @@ def run(output_path=None, max_pages=None):
                                 item_data[label] = value
                 
                 all_data.append(item_data)
+                # Add to processed set
+                if entity_name and entity_name != "Unknown":
+                    processed_items.add(entity_name)
+                    
                 print(f"    Collected Name: {entity_name}")
                 print(f"    Collected Data Keys: {list(item_data.keys())}")
                 

@@ -1,118 +1,172 @@
+import customtkinter as ctk
 import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
+from tkinter import filedialog, messagebox
 import threading
 import sys
+import os
 import scrape_muasamcong
 
-class ScraperGUI:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Tool Scrape Muasamcong")
-        self.root.geometry("600x500")
+# Configuration
+ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
+ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+
+class ScraperApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+
+        # Window Setup
+        self.title("Tool Cào Dữ Liệu Mua Sắm Công - VNEPS")
+        self.geometry("800x600")
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(2, weight=1) # Log area expands
+
+        # 1. Header Section
+        self.header_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.header_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=(20, 10))
         
-        # Style
-        style = ttk.Style()
-        style.configure('TButton', font=('Helvetica', 10))
-        style.configure('TLabel', font=('Helvetica', 10))
+        self.title_label = ctk.CTkLabel(self.header_frame, text="VN-EPS DATA SCRAPER", 
+                                      font=ctk.CTkFont(size=24, weight="bold"))
+        self.title_label.pack(anchor="w")
+        
+        self.subtitle_label = ctk.CTkLabel(self.header_frame, text="Automation Tool for Mua Sam Cong Data", 
+                                         font=ctk.CTkFont(size=14, slant="italic"), text_color="gray")
+        self.subtitle_label.pack(anchor="w")
 
-        # Main Frame
-        main_frame = ttk.Frame(root, padding="20")
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # 2. Controls Section (Card-like look)
+        self.controls_frame = ctk.CTkFrame(self)
+        self.controls_frame.grid(row=1, column=0, sticky="ew", padx=20, pady=10)
+        self.controls_frame.grid_columnconfigure(1, weight=1)
 
-        # Title
-        title_label = ttk.Label(main_frame, text="TOOL CÀO DỮ LIỆU NHÀ ĐẦU TƯ", font=('Helvetica', 16, 'bold'))
-        title_label.pack(pady=(0, 20))
-
-        # Input Frame
-        input_frame = ttk.Frame(main_frame)
-        input_frame.pack(fill=tk.X, pady=5)
-
-        # Filename Input
-        ttk.Label(input_frame, text="Tên file kết quả (.xlsx):").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
-        self.filename_var = tk.StringVar(value="investors_data_detailed.xlsx")
-        self.filename_entry = ttk.Entry(input_frame, textvariable=self.filename_var, width=40)
-        self.filename_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+        # File Path Input
+        self.path_label = ctk.CTkLabel(self.controls_frame, text="File Save Path:", font=ctk.CTkFont(weight="bold"))
+        self.path_label.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="w")
+        
+        default_path = os.path.join(os.getcwd(), "investors_data_detailed.xlsx")
+        self.path_entry = ctk.CTkEntry(self.controls_frame, placeholder_text="Path to save .xlsx file")
+        self.path_entry.grid(row=0, column=1, padx=(0, 10), pady=(20, 10), sticky="ew")
+        self.path_entry.insert(0, default_path)
+        
+        self.browse_btn = ctk.CTkButton(self.controls_frame, text="Browse", text_color="white", width=80, command=self.browse_file)
+        self.browse_btn.grid(row=0, column=2, padx=20, pady=(20, 10))
 
         # Page Limit Input
-        ttk.Label(input_frame, text="Số trang muốn cào (0 = Tất cả):").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
-        self.limit_var = tk.StringVar(value="0")
-        self.limit_entry = ttk.Entry(input_frame, textvariable=self.limit_var, width=10)
-        self.limit_entry.grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
-
-        input_frame.columnconfigure(1, weight=1)
-
-        # Button Frame
-        btn_frame = ttk.Frame(main_frame)
-        btn_frame.pack(pady=20)
-
-        self.start_btn = ttk.Button(btn_frame, text="Bắt đầu chạy", command=self.start_scraping)
-        self.start_btn.pack(side=tk.LEFT, padx=10)
+        self.limit_label = ctk.CTkLabel(self.controls_frame, text="Page Limit:", font=ctk.CTkFont(weight="bold"))
+        self.limit_label.grid(row=1, column=0, padx=20, pady=(10, 20), sticky="w")
         
-        self.stop_btn = ttk.Button(btn_frame, text="Thoát", command=root.destroy)
-        self.stop_btn.pack(side=tk.LEFT, padx=10)
+        self.limit_entry = ctk.CTkEntry(self.controls_frame, placeholder_text="0 for all")
+        self.limit_entry.grid(row=1, column=1, padx=(0, 20), pady=(10, 20), sticky="w")
+        self.limit_entry.insert(0, "0")
+        
+        self.hint_label = ctk.CTkLabel(self.controls_frame, text="(Enter 0 to scrape ALL pages)", text_color="gray")
+        self.hint_label.grid(row=1, column=1, padx=(150, 0), pady=(10, 20), sticky="w")
 
-        # Log Area
-        ttk.Label(main_frame, text="Log hoạt động:").pack(anchor=tk.W)
-        self.log_area = scrolledtext.ScrolledText(main_frame, height=15, state='disabled', font=('Consolas', 9))
-        self.log_area.pack(fill=tk.BOTH, expand=True, pady=5)
+        # Action Buttons
+        self.start_btn = ctk.CTkButton(self.controls_frame, text="START SCRAPING", 
+                                     font=ctk.CTkFont(size=15, weight="bold"),
+                                     text_color="white",
+                                     height=40, fg_color="#2ecc71", hover_color="#27ae60",
+                                     command=self.start_scraping)
+        self.start_btn.grid(row=2, column=0, columnspan=3, padx=20, pady=(10, 20), sticky="ew")
 
-        # Redirect stdout
+        # 3. Console/Log Section
+        self.log_frame = ctk.CTkFrame(self)
+        self.log_frame.grid(row=2, column=0, sticky="nsew", padx=20, pady=(10, 20))
+        self.log_frame.grid_rowconfigure(1, weight=1)
+        self.log_frame.grid_columnconfigure(0, weight=1)
+
+        self.log_label = ctk.CTkLabel(self.log_frame, text="Real-time Logs", font=ctk.CTkFont(weight="bold"))
+        self.log_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+
+        self.log_area = ctk.CTkTextbox(self.log_frame, font=("Consolas", 12))
+        self.log_area.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
+        self.log_area.configure(state="disabled")
+
+        # 4. Footer
+        self.status_label = ctk.CTkLabel(self, text="Ready", anchor="w")
+        self.status_label.grid(row=3, column=0, sticky="ew", padx=20, pady=(0, 10))
+
+        # Redirect Stdout
         sys.stdout = self
         sys.stderr = self
 
+    def browse_file(self):
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel Files", "*.xlsx"), ("All Files", "*.*")],
+            initialfile="investors_data_detailed.xlsx",
+            title="Save Output As"
+        )
+        if filename:
+            self.path_entry.delete(0, tk.END)
+            self.path_entry.insert(0, filename)
+
     def write(self, text):
-        self.log_area.configure(state='normal')
+        self.log_area.configure(state="normal")
         self.log_area.insert(tk.END, text)
         self.log_area.see(tk.END)
-        self.log_area.configure(state='disabled')
-        # Force update idle tasks to keep UI responsive
-        self.root.update_idletasks()
+        self.log_area.configure(state="disabled")
+        # CustomTkinter needs update calls sometimes for thread safety in UI updates
+        # self.update_idletasks() # Careful with this in threads
 
     def flush(self):
         pass
 
     def start_scraping(self):
-        filename = self.filename_var.get().strip()
-        limit_str = self.limit_var.get().strip()
+        output_path = self.path_entry.get().strip()
+        limit_str = self.limit_entry.get().strip()
 
-        if not filename:
-            messagebox.showerror("Lỗi", "Vui lòng nhập tên file!")
+        if not output_path:
+            messagebox.showerror("Error", "Please specify a save file path!")
             return
 
         try:
-            limit = int(limit_str)
-            if limit <= 0:
+            max_pages = int(limit_str)
+            if max_pages <= 0:
                 max_pages = float('inf')
-            else:
-                max_pages = limit
         except ValueError:
-            messagebox.showerror("Lỗi", "Số trang phải là số nguyên!")
+            messagebox.showerror("Error", "Page Limit must be an integer!")
             return
 
-        # Disable button
-        self.start_btn.config(state='disabled')
-        self.log_area.configure(state='normal')
-        self.log_area.delete(1.0, tk.END)
-        self.log_area.configure(state='disabled')
+        # UI Updates
+        self.start_btn.configure(state="disabled", text="RUNNING...", fg_color="#e67e22")
+        self.path_entry.configure(state="disabled")
+        self.limit_entry.configure(state="disabled")
+        self.status_label.configure(text="Status: Scraping in progress... Please do not close the browser window.")
+        
+        self.log_area.configure(state="normal")
+        self.log_area.delete("0.0", tk.END)
+        self.log_area.configure(state="disabled")
 
-        # Run in thread
-        t = threading.Thread(target=self.run_process, args=(filename, max_pages))
+        # Threading
+        t = threading.Thread(target=self.run_process, args=(output_path, max_pages))
         t.daemon = True
         t.start()
-
-    def run_process(self, filename, max_pages):
+    
+    def run_process(self, output_path, max_pages):
         try:
-            print("Đang khởi động trình duyệt...")
-            scrape_muasamcong.run(output_path=filename, max_pages=max_pages)
-            print("\nHOÀN THÀNH!")
-            messagebox.showinfo("Thành công", "Đã cào dữ liệu xong!")
+            print(">>> INITIALIZING SCRAPER...")
+            print(f"> Target File: {output_path}")
+            print(f"> Page Limit:  {'Unlimited' if max_pages == float('inf') else max_pages}")
+            print("-" * 50)
+            
+            scrape_muasamcong.run(output_path=output_path, max_pages=max_pages)
+            
+            print("\n>>> COMPLETED SUCCESSFULLY!")
+            self.status_label.configure(text="Status: Completed ✅")
+            messagebox.showinfo("Success", f"Data scraping finished!\nSaved to: {output_path}")
         except Exception as e:
-            print(f"\nLỖI: {e}")
-            messagebox.showerror("Lỗi", f"Có lỗi xảy ra: {e}")
+            print(f"\n>>> ERROR: {e}")
+            self.status_label.configure(text="Status: Error ❌")
+            messagebox.showerror("Error", f"An error occurred: {e}")
         finally:
-            self.root.after(0, lambda: self.start_btn.config(state='normal'))
+            # Safely reset UI
+            self.after(0, self.reset_ui)
+
+    def reset_ui(self):
+        self.start_btn.configure(state="normal", text="START SCRAPING", fg_color="#2ecc71")
+        self.path_entry.configure(state="normal")
+        self.limit_entry.configure(state="normal")
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = ScraperGUI(root)
-    root.mainloop()
+    app = ScraperApp()
+    app.mainloop()
