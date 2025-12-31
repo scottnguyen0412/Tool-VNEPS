@@ -44,17 +44,32 @@ def run(output_path=None, max_pages=None):
         try:
             print(f"File '{output_path}' tồn tại. Đang đọc dữ liệu cũ để tránh trùng lặp...")
             existing_df = pd.read_excel(output_path)
-            if "Entity Name" in existing_df.columns:
-                processed_items = set(existing_df["Entity Name"].dropna().astype(str).str.strip())
-                # Load all fields to keep history if we strictly append, 
-                # but here we usually overwrite the file with all_data. 
-                # So we should populate all_data with existing rows.
+            
+            # Use 'Mã định danh' for checking if available, else 'Entity Name'
+            check_col = "Mã định danh"
+            if check_col not in existing_df.columns:
+                 check_col = "Entity Name" # Fallback
+            
+            if check_col in existing_df.columns:
+                processed_items = set(existing_df[check_col].dropna().astype(str).str.strip())
+                # Load all fields to keep history
                 all_data = existing_df.to_dict('records')
-            print(f"Đã tải {len(processed_items)} nhà đầu tư đã cào trước đó.")
+                
+            print(f"Đã tải {len(processed_items)} nhà đầu tư đã cào trước đó (Check theo: {check_col}).")
         except Exception as e:
             print(f"Cảnh báo: Không đọc được file cũ ({e}). Sẽ tạo mới.")
 
-            
+    def wait_for_internet(page):
+        while True:
+            try:
+                is_online = page.evaluate("navigator.onLine")
+                if is_online:
+                    return
+                print("Mất kết nối Internet! Đang chờ kết nối lại...")
+            except:
+                print("Lỗi khi kiểm tra kết nối. Đang thử lại...")
+            time.sleep(5)
+
     with sync_playwright() as p:
         browser = None
         # Try using system browsers (Chrome/Edge) to avoid path issues in EXE
@@ -77,17 +92,30 @@ def run(output_path=None, max_pages=None):
         page = context.new_page()
 
         print("Navigating to page...")
-        page.goto("https://muasamcong.mpi.gov.vn/web/guest/investors-approval-v2", timeout=60000)
+        try:
+            page.goto("https://muasamcong.mpi.gov.vn/web/guest/investors-approval-v2", timeout=60000)
+        except:
+             print("Lỗi tải trang ban đầu. Đang thử tải lại...")
+             wait_for_internet(page)
+             page.reload()
+
         
         # Wait for search bar
         search_input_selector = 'input[placeholder="Tìm kiếm chủ đầu tư"]'
         try:
-            page.wait_for_selector(search_input_selector, timeout=20000)
+            page.wait_for_selector(search_input_selector, timeout=30000)
             print("Found search bar.")
         except:
-            print("Search bar not found. Exiting.")
-            browser.close()
-            return
+            print("Search bar not found. Vui lòng kiểm tra kết nối mạng.")
+            wait_for_internet(page)
+            # Try reload once
+            page.reload()
+            try:
+                page.wait_for_selector(search_input_selector, timeout=30000)
+            except:
+                print("Vẫn không thấy search bar. Exiting.")
+                browser.close()
+                return
 
         # Trigger search
         print("Triggering search...")
@@ -96,24 +124,37 @@ def run(output_path=None, max_pages=None):
         
         # Wait for items to appear
         item_selector = "h2.content__body__item__title"
+        # Since we want to check ID, we should also look for the container or the title. 
+        # The title selector is what we click on later.
+        
         try:
-            page.wait_for_selector(item_selector, timeout=20000)
+            page.wait_for_selector(item_selector, timeout=30000)
             print("Items loaded.")
         except:
-            print("No items found after search.")
-            browser.close()
-            return
+            print("No items found after search. Retrying...")
+            wait_for_internet(page)
+            page.reload()
+            # Need to search again?
+             # Trigger search again
+            try:
+                 page.fill(search_input_selector, "")
+                 page.press(search_input_selector, "Enter")
+                 page.wait_for_selector(item_selector, timeout=30000)
+            except:
+                 print("Failed to load empty list. Exiting.")
+                 browser.close()
+                 return
 
         page_num = 1
         
         while page_num <= max_pages:
             print(f"Processing Page {page_num}...")
+            wait_for_internet(page)
+            
             if max_pages != float('inf'):
                  print(f"(Target: {max_pages} pages)")
             
             # Re-query items to get count
-            # Note: In SPAs, elements get stale, so we shouldn't store the element handles across navigations.
-            # We use nth index to access them.
             time.sleep(2) # Stabilize
             count = page.locator(item_selector).count()
             print(f"Found {count} items on this page.")
@@ -130,23 +171,50 @@ def run(output_path=None, max_pages=None):
                 skipped = False
                 while retry < 3:
                     try:
+                        wait_for_internet(page)
                         # Locate item again
-                        item = page.locator(item_selector).nth(i)
+                        item_title_element = page.locator(item_selector).nth(i)
+                        
+                        # Find the ID for this item
+                        # Strategy: item_title_element is h2. From h2, go up to common parent, then find h4 with ID
+                        # Based on inspection: h2 and h4 are inside the same container.
+                        # We can use locator chaining or xpath relative to the title
+                        # But simpler: The list of IDs corresponds to the list of Titles in order usually.
+                        # Proper way: Get parent then find h4.
+                        # h2 class: content__body__item__title
+                        # h4 class: content__body__item__heading__text
+                        
+                        # Using 'locator(..).locator(..)' finds descendants.
+                        # We need sibling/cousin. 
+                        # Let's select the card container first.
+                        # Card container is likely .content__body__item based on inspection
+                        card = page.locator(".content__body__item").nth(i)
                         
                         # Check for duplicate before clicking
+                        item_id = ""
                         try:
-                            item_title = item.inner_text().strip()
-                            if item_title in processed_items:
-                                print(f"    Skipping duplicate: {item_title}")
-                                skipped = True
-                                break 
+                            # Try to get ID
+                            id_el = card.locator("h4.content__body__item__heading__text")
+                            if id_el.count() > 0:
+                                item_id = id_el.first.inner_text().strip()
                         except:
                             pass
                         
-                        item.click(timeout=5000)
+                        # Fallback to Name if ID not found (unlikely)
+                        if not item_id:
+                             item_id = item_title_element.inner_text().strip() # Use Name as ID
+                        
+                        if item_id in processed_items:
+                            print(f"    Skipping duplicate (ID/Name): {item_id}")
+                            skipped = True
+                            break 
+                        
+                        # Click the title to open
+                        item_title_element.click(timeout=10000)
                         break
                     except Exception as e:
                         print(f"    Error clicking item: {e}. Retrying...")
+                        wait_for_internet(page) # Check net
                         time.sleep(1)
                         retry += 1
                 
@@ -162,15 +230,21 @@ def run(output_path=None, max_pages=None):
                 try:
                     page.wait_for_selector(back_btn_selector, timeout=10000)
                 except:
-                    print("    Detail page load failed (Back button not found). Trying to go back manually.")
-                    page.go_back()
+                    print("    Detail page load failed. Trying to go back manually.")
+                    wait_for_internet(page)
+                    try:
+                        page.go_back(timeout=60000, wait_until="domcontentloaded")
+                    except Exception as e:
+                        print(f"    Warning: go_back timed out or failed: {e}. Checking if we returned anyway...")
+                    
                     # Wait for list to reappear, with retry
                     try:
                          page.wait_for_selector(item_selector, timeout=15000)
                     except:
-                         print("List not appearing after back. Reloading page...")
+                         print("    Timeout waiting for list. Reloading page...")
+                         wait_for_internet(page)
                          page.reload()
-                         page.wait_for_selector(item_selector, timeout=30000)
+                         page.wait_for_selector(item_selector, timeout=60000)
                     continue
 
                 # Extract Detail Data
@@ -185,6 +259,9 @@ def run(output_path=None, max_pages=None):
                             break
                 
                 item_data = {"Entity Name": entity_name}
+                # Also save the ID we found earlier to ensure consistency?
+                # Or extract from Detail page to be sure.
+                # Detail page usually has ID listed in rows.
                 
                 # Extract Fields
                 # Try specific class first, found by inspection
@@ -205,7 +282,6 @@ def run(output_path=None, max_pages=None):
                          if label_el.count() > 0:
                              label = label_el.inner_text().strip()
                              # Value is likely the sibling or specifically targeted
-                             # Let's try getting all text of row and splitting, or parent's other child
                              # Better: assuming standard structure div > div.title + div.value
                              # We can use xpath or css to get the second div
                              value_el = row.locator("div").nth(1)
@@ -223,34 +299,47 @@ def run(output_path=None, max_pages=None):
                                 item_data[label] = value
                 
                 all_data.append(item_data)
-                # Add to processed set
-                if entity_name and entity_name != "Unknown":
-                    processed_items.add(entity_name)
+                
+                # Add to processed list using logical ID
+                # If we have "Mã định danh" in item_data, use that. Else use entity_name
+                final_id = item_data.get("Mã định danh", entity_name) 
+                
+                # If we scraped successfully, let's prefer the ID we saw on the list if detail missed it? 
+                # No, detail is source of truth. But for skip logic, list ID is used.
+                # To be safe: Add BOTH the List ID (if we got it) AND the Detail ID.
+                # But processed_items is a set of ONE key.
+                # Recommendation: Use the same check key as on the list.
+                # Check key is the one we extracted: item_id (which is ID from list)
+                if item_id:
+                     processed_items.add(item_id)
+                elif final_id:
+                     processed_items.add(final_id)
                     
-                print(f"    Collected Name: {entity_name}")
-                print(f"    Collected Data Keys: {list(item_data.keys())}")
+                print(f"    Collected: {entity_name} (ID: {final_id})")
                 
                 # Sleep explicitly as requested to avoid block
                 time.sleep(random.uniform(1, 2))
 
                 # Go Back
+                wait_for_internet(page)
                 page.click(back_btn_selector)
                 
-                # Wait for list to reappear
                 # Wait for list to reappear
                 try:
                     page.wait_for_selector(item_selector, timeout=20000)
                 except:
                      print("    Timeout waiting for list after back. Reloading page...")
+                     wait_for_internet(page)
                      try:
                          page.reload()
                          page.wait_for_selector(item_selector, timeout=60000)
                      except Exception as e:
-                         print(f"    Critical error reloading list: {e}. Skipping to next iteration (might fail further).")
+                         print(f"    Critical error reloading list: {e}. Skipping to next iteration.")
 
             # Save progress after each page
             try:
                 df = pd.DataFrame(all_data)
+                # Ensure columns order if wanted
                 df.to_excel(output_path, index=False)
                 print(f"  Page completed. Progress saved to {output_path}.")
             except PermissionError:
@@ -262,7 +351,8 @@ def run(output_path=None, max_pages=None):
 
             # Pagination
             print("Checking pagination...")
-            # Scroll to bottom to ensure elements are rendered/interactable
+            wait_for_internet(page)
+            # Scroll to bottom
             page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
             time.sleep(1)
 
@@ -284,19 +374,17 @@ def run(output_path=None, max_pages=None):
                     page_num += 1
                     
                     # Wait for items to refresh
-                    # Strategy: Wait for the item count to change or just wait for load
-                    # Since we don't know if count changes, we wait for a bit and check presence
                     time.sleep(3) 
-                    
-                    # Optional: wait for specific loading indicator if known
-                    # Or wait for the active page number to update
-                    # active_page = page.locator("ul.el-pager li.active")
-                    # print(f"Now on page: {active_page.inner_text()}")
-
                     page.wait_for_selector(item_selector, timeout=20000)
                 except Exception as e:
                     print(f"Error clicking next or waiting for load: {e}")
-                    break
+                    wait_for_internet(page)
+                    # Retry once
+                    try: 
+                        next_btn.click()
+                        page.wait_for_selector(item_selector, timeout=20000)
+                    except:
+                        break
             else:
                 print("No Next button found. Last page reached.")
                 break
