@@ -237,7 +237,16 @@ def run(output_path=None, max_pages=None):
                 page.click(back_btn_selector)
                 
                 # Wait for list to reappear
-                page.wait_for_selector(item_selector, timeout=10000)
+                # Wait for list to reappear
+                try:
+                    page.wait_for_selector(item_selector, timeout=20000)
+                except:
+                     print("    Timeout waiting for list after back. Reloading page...")
+                     try:
+                         page.reload()
+                         page.wait_for_selector(item_selector, timeout=60000)
+                     except Exception as e:
+                         print(f"    Critical error reloading list: {e}. Skipping to next iteration (might fail further).")
 
             # Save progress after each page
             try:
