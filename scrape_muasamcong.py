@@ -303,46 +303,56 @@ def run(output_path=None, max_pages=None):
                 row_count = rows.count()
                 
                 for r in range(row_count):
-                    row = rows.nth(r)
-                    # Check if it has 2 clear columns
-                    # Usually title is first child, value is second
-                    if row_selector == ".infomation-course__content":
-                         # Based on inspection: .infomation-course__content__title and .infomation-course__content__value
-                         label_el = row.locator(".infomation-course__content__title")
-                         if label_el.count() > 0:
-                             label = label_el.inner_text().strip()
-                             
-                             # Try specific value class first
-                             value_el = row.locator(".infomation-course__content__value")
-                             value = ""
-                             if value_el.count() > 0:
-                                 value = value_el.first.inner_text().strip()
-                             else:
-                                 # Fallback: get all text and replace label
-                                 # Or try generic sibling
-                                 value_divs = row.locator("div")
-                                 if value_divs.count() >= 2:
-                                      value = value_divs.nth(1).inner_text().strip()
+                    try:
+                        row = rows.nth(r)
+                        # Check if it has 2 clear columns
+                        # Usually title is first child, value is second
+                        if row_selector == ".infomation-course__content":
+                             # Based on inspection: .infomation-course__content__title and .infomation-course__content__value
+                             label_el = row.locator(".infomation-course__content__title")
+                             if label_el.count() > 0:
+                                 label = label_el.inner_text(timeout=5000).strip()
                                  
-                                 if not value:
-                                     # Last resort: raw text parsing
-                                     full_text = row.inner_text().strip()
-                                     if label in full_text:
-                                         value = full_text.replace(label, "", 1).strip()
-                                         # Clean up any leading colons if present
-                                         if value.startswith(":"):
-                                             value = value[1:].strip()
+                                 # Try specific value class first
+                                 value_el = row.locator(".infomation-course__content__value")
+                                 value = ""
+                                 if value_el.count() > 0:
+                                     value = value_el.first.inner_text(timeout=5000).strip()
+                                 else:
+                                     # Fallback: get all text and replace label
+                                     # Or try generic sibling
+                                     value_divs = row.locator("div")
+                                     if value_divs.count() >= 2:
+                                          try:
+                                              value = value_divs.nth(1).inner_text(timeout=5000).strip()
+                                          except:
+                                              pass
+                                     
+                                     if not value:
+                                         # Last resort: raw text parsing
+                                         try:
+                                             full_text = row.inner_text(timeout=5000).strip()
+                                             if label in full_text:
+                                                 value = full_text.replace(label, "", 1).strip()
+                                                 if value.startswith(":"):
+                                                     value = value[1:].strip()
+                                         except:
+                                             pass
 
-                             if label:
-                                 item_data[label] = value
-                    else:
-                        # Fallback for generic .row
-                        cols = row.locator("div")
-                        if cols.count() >= 2:
-                            label = cols.nth(0).inner_text().strip()
-                            value = cols.nth(1).inner_text().strip()
-                            if label and value:
-                                item_data[label] = value
+                                 if label:
+                                     item_data[label] = value
+                        else:
+                            # Fallback for generic .row
+                            cols = row.locator("div")
+                            if cols.count() >= 2:
+                                label = cols.nth(0).inner_text(timeout=5000).strip()
+                                value = cols.nth(1).inner_text(timeout=5000).strip()
+                                if label and value:
+                                    item_data[label] = value
+                    except Exception as e:
+                        # If a single row fails, don't crash the whole item scraping
+                        # print(f"    Warning: Error scraping a detail row: {e}")
+                        continue
                 
                 # Cross-fill Logic (Self-Healing)
                 # 1. If Entity Name is Unknown, try to get from "Tên đơn vị (đầy đủ)" or "Tên dùng trong đấu thầu"
@@ -383,9 +393,35 @@ def run(output_path=None, max_pages=None):
                 time.sleep(random.uniform(1, 2))
 
                 # Go Back
+                print("    Going back to list...")
                 wait_for_internet(page)
-                page.click(back_btn_selector)
+                back_success = False
+                for b_retry in range(3):
+                    try:
+                        # Try normal click
+                        if b_retry == 0:
+                            page.click(back_btn_selector, timeout=10000)
+                        else:
+                            # Try JS click if normal click fails (element detached/overlayed)
+                            print("    Retry back button using JS...")
+                            page.evaluate("document.querySelector('button.btn-back') && document.querySelector('button.btn-back').click()")
+                            time.sleep(2)
+                        
+                        # Verify we actually went back? 
+                        # We do this by waiting for list item which is done below.
+                        back_success = True
+                        break
+                    except Exception as e:
+                        print(f"    Back click failed (attempt {b_retry+1}): {e}")
+                        time.sleep(2)
                 
+                if not back_success:
+                     print("    Critical: Could not click Back button. Force reloading page to list...")
+                     try:
+                         page.goto("https://muasamcong.mpi.gov.vn/web/guest/investors-approval-v2", timeout=60000)
+                     except:
+                         pass
+
                 # Wait for list to reappear
                 try:
                     page.wait_for_selector(item_selector, timeout=20000)
