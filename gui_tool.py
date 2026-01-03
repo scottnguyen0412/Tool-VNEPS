@@ -14,7 +14,8 @@ import scrape_muasamcong
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
-CURRENT_VERSION = "v1.0.0"
+# Sửa mỗi khi release
+CURRENT_VERSION = "v1.0.1"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -94,9 +95,15 @@ class ScraperApp(ctk.CTk):
         self.log_area.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
         self.log_area.configure(state="disabled")
 
-        # 4. Footer
+        # 4. Footer Status
         self.status_label = ctk.CTkLabel(self, text="Ready", anchor="w")
-        self.status_label.grid(row=3, column=0, sticky="ew", padx=20, pady=(0, 10))
+        self.status_label.grid(row=3, column=0, sticky="ew", padx=20, pady=(0, 5))
+
+        # 5. Branding Footer
+        self.footer_label = ctk.CTkLabel(self, text="Made with ❤️ by IT Boston", 
+                                       font=ctk.CTkFont(size=12, slant="italic"), 
+                                       text_color="gray")
+        self.footer_label.grid(row=4, column=0, pady=(0, 10))
 
         # Redirect Stdout
         sys.stdout = self
