@@ -249,19 +249,49 @@ def run(output_path=None, max_pages=None):
 
                 # Extract Detail Data
                 entity_name = "Unknown"
-                # Try multiple selectors for the name
-                name_selectors = [".content-body__header", "h3.font-weight-bold", "h3", "h2", ".title"]
+                # Try multiple selectors for the name. Prioritize specific ones.
+                name_selectors = [
+                    ".content-body__header h5", 
+                    "h5.content__body__heading", 
+                    ".content-body__header", 
+                    "h3.font-weight-bold", 
+                    "h3", 
+                    "h5", 
+                    "h4", 
+                    "h2", 
+                    ".title"
+                ]
+                
+                bad_names = ["Danh sách chủ đầu tư được phê duyệt", "EGP_v2.0", "Trang chủ", "Home", "Tra cứu", "Tình huống đấu thầu"]
+
                 for sel in name_selectors:
-                    if page.locator(sel).count() > 0:
-                        text = page.locator(sel).first.inner_text().strip()
-                        if text:
+                    elements = page.locator(sel)
+                    count_sel = elements.count()
+                    for k in range(count_sel):
+                        el = elements.nth(k)
+                        text = el.inner_text().strip()
+                        
+                        # Skip if part of sidebar/menu (often inside .card-header or mb-0)
+                        # We can check class or parent class, but simpler to just check text for now.
+                        # Advanced: Check if visible?
+                        if not el.is_visible():
+                             continue
+
+                        # Check if text is valid and not a bad generic header
+                        is_bad = False
+                        for bad in bad_names:
+                            if bad.lower() in text.lower():
+                                is_bad = True
+                                break
+                        
+                        if text and not is_bad:
                             entity_name = text
                             break
+                    
+                    if entity_name != "Unknown":
+                        break
                 
                 item_data = {"Entity Name": entity_name}
-                # Also save the ID we found earlier to ensure consistency?
-                # Or extract from Detail page to be sure.
-                # Detail page usually has ID listed in rows.
                 
                 # Extract Fields
                 # Try specific class first, found by inspection
@@ -277,18 +307,34 @@ def run(output_path=None, max_pages=None):
                     # Check if it has 2 clear columns
                     # Usually title is first child, value is second
                     if row_selector == ".infomation-course__content":
-                         # Based on inspection: .infomation-course__content__title and the sibling div
+                         # Based on inspection: .infomation-course__content__title and .infomation-course__content__value
                          label_el = row.locator(".infomation-course__content__title")
                          if label_el.count() > 0:
                              label = label_el.inner_text().strip()
-                             # Value is likely the sibling or specifically targeted
-                             # Better: assuming standard structure div > div.title + div.value
-                             # We can use xpath or css to get the second div
-                             value_el = row.locator("div").nth(1)
+                             
+                             # Try specific value class first
+                             value_el = row.locator(".infomation-course__content__value")
+                             value = ""
                              if value_el.count() > 0:
-                                 value = value_el.inner_text().strip()
-                                 if label:
-                                     item_data[label] = value
+                                 value = value_el.first.inner_text().strip()
+                             else:
+                                 # Fallback: get all text and replace label
+                                 # Or try generic sibling
+                                 value_divs = row.locator("div")
+                                 if value_divs.count() >= 2:
+                                      value = value_divs.nth(1).inner_text().strip()
+                                 
+                                 if not value:
+                                     # Last resort: raw text parsing
+                                     full_text = row.inner_text().strip()
+                                     if label in full_text:
+                                         value = full_text.replace(label, "", 1).strip()
+                                         # Clean up any leading colons if present
+                                         if value.startswith(":"):
+                                             value = value[1:].strip()
+
+                             if label:
+                                 item_data[label] = value
                     else:
                         # Fallback for generic .row
                         cols = row.locator("div")
@@ -297,6 +343,22 @@ def run(output_path=None, max_pages=None):
                             value = cols.nth(1).inner_text().strip()
                             if label and value:
                                 item_data[label] = value
+                
+                # Cross-fill Logic (Self-Healing)
+                # 1. If Entity Name is Unknown, try to get from "Tên đơn vị (đầy đủ)" or "Tên dùng trong đấu thầu"
+                if entity_name == "Unknown":
+                    if "Tên đơn vị (đầy đủ)" in item_data and item_data["Tên đơn vị (đầy đủ)"]:
+                        entity_name = item_data["Tên đơn vị (đầy đủ)"]
+                    elif "Tên tiếng Việt" in item_data and item_data["Tên tiếng Việt"]: # Possible alias
+                         entity_name = item_data["Tên tiếng Việt"]
+
+                # 2. If "Tên đơn vị (đầy đủ)" is missing, fill from Entity Name
+                if "Tên đơn vị (đầy đủ)" not in item_data or not item_data["Tên đơn vị (đầy đủ)"]:
+                    if entity_name != "Unknown":
+                        item_data["Tên đơn vị (đầy đủ)"] = entity_name
+
+                # Update Entity Name in dict if we want it there explicitly as the main key
+                item_data["Entity Name"] = entity_name
                 
                 all_data.append(item_data)
                 
