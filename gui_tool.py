@@ -4,21 +4,29 @@ from tkinter import filedialog, messagebox
 import threading
 import sys
 import os
+import json
+import urllib.request
+import subprocess
+import time
 import scrape_muasamcong
 
 # Configuration
-ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
-ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+ctk.set_appearance_mode("System")
+ctk.set_default_color_theme("blue")
+
+CURRENT_VERSION = "v1.0.0"
+REPO_OWNER = "scottnguyen0412"
+REPO_NAME = "Tool-VNEPS"
 
 class ScraperApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         # Window Setup
-        self.title("Tool Cào Dữ Liệu Mua Sắm Công - VNEPS")
-        self.geometry("800x600")
+        self.title(f"Tool Cào Dữ Liệu Mua Sắm Công - VNEPS ({CURRENT_VERSION})")
+        self.geometry("800x650")
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(2, weight=1) # Log area expands
+        self.grid_rowconfigure(2, weight=1)
 
         # 1. Header Section
         self.header_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -28,11 +36,16 @@ class ScraperApp(ctk.CTk):
                                       font=ctk.CTkFont(size=24, weight="bold"))
         self.title_label.pack(anchor="w")
         
-        self.subtitle_label = ctk.CTkLabel(self.header_frame, text="Automation Tool for Mua Sam Cong Data", 
+        self.subtitle_label = ctk.CTkLabel(self.header_frame, text=f"Automation Tool for Mua Sam Cong Data - Version {CURRENT_VERSION}", 
                                          font=ctk.CTkFont(size=14, slant="italic"), text_color="gray")
         self.subtitle_label.pack(anchor="w")
 
-        # 2. Controls Section (Card-like look)
+        # Update Button (Top Right)
+        self.update_btn = ctk.CTkButton(self.header_frame, text="Check Updates", width=100, 
+                                        command=self.check_for_updates_thread)
+        self.update_btn.pack(anchor="e", pady=(0, 0))
+
+        # 2. Controls Section
         self.controls_frame = ctk.CTkFrame(self)
         self.controls_frame.grid(row=1, column=0, sticky="ew", padx=20, pady=10)
         self.controls_frame.grid_columnconfigure(1, weight=1)
@@ -88,6 +101,9 @@ class ScraperApp(ctk.CTk):
         # Redirect Stdout
         sys.stdout = self
         sys.stderr = self
+        
+        # Auto-check updates on startup
+        self.after(2000, self.check_for_updates_thread)
 
     def browse_file(self):
         filename = filedialog.asksaveasfilename(
@@ -105,8 +121,6 @@ class ScraperApp(ctk.CTk):
         self.log_area.insert(tk.END, text)
         self.log_area.see(tk.END)
         self.log_area.configure(state="disabled")
-        # CustomTkinter needs update calls sometimes for thread safety in UI updates
-        # self.update_idletasks() # Careful with this in threads
 
     def flush(self):
         pass
@@ -166,6 +180,93 @@ class ScraperApp(ctk.CTk):
         self.start_btn.configure(state="normal", text="START SCRAPING", fg_color="#2ecc71")
         self.path_entry.configure(state="normal")
         self.limit_entry.configure(state="normal")
+
+    # --- UPDATE LOGIC ---
+    def check_for_updates_thread(self):
+        t = threading.Thread(target=self.check_update)
+        t.daemon = True
+        t.start()
+
+    def check_update(self):
+        print("Checking for updates...")
+        try:
+            api_url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/latest"
+            with urllib.request.urlopen(api_url) as response:
+                data = json.loads(response.read().decode())
+                latest_tag = data.get("tag_name", "")
+                
+                # Check version (Simply check string inequality or parsing)
+                if latest_tag and latest_tag != CURRENT_VERSION:
+                    print(f"New version found: {latest_tag}")
+                    
+                    # Find asset
+                    exe_asset = None
+                    for asset in data.get("assets", []):
+                        if asset["name"].endswith(".exe"):
+                            exe_asset = asset
+                            break
+                    
+                    if exe_asset:
+                        # Notify User in Main Thread
+                        self.after(0, lambda: self.prompt_update(latest_tag, exe_asset["browser_download_url"]))
+                    else:
+                        print("No EXE asset found in release.")
+                else:
+                    print("You are using the latest version.")
+        except Exception as e:
+            print(f"Update check failed: {e}")
+
+    def prompt_update(self, version, url):
+        ans = messagebox.askyesno("Update Available", f"A new version {version} is available.\nDo you want to update now?")
+        if ans:
+            self.start_update(url)
+
+    def start_update(self, url):
+        self.status_label.configure(text="Updating... DO NOT CLOSE")
+        self.log_area.configure(state="normal")
+        self.log_area.insert(tk.END, "\n>>> STARTING UPDATE...\n")
+        
+        t = threading.Thread(target=self.download_and_swap, args=(url,))
+        t.daemon = True
+        t.start()
+
+    def download_and_swap(self, url):
+        try:
+            print(f"Downloading update from {url}...")
+            new_exe_name = "Tool_Scrape_Muasamcong_new.exe"
+            urllib.request.urlretrieve(url, new_exe_name)
+            print("Download completed.")
+            
+            # Create Update Script
+            current_exe = sys.executable
+            # If running from script, this might be python.exe, handle that?
+            # If running as EXE, sys.executable is the exe path.
+            # If running as script, we can't really 'update' the script easily this way without git pull.
+            # Assuming frozen (EXE)
+            
+            if getattr(sys, 'frozen', False):
+                exe_name = os.path.basename(current_exe)
+                bat_script = f"""
+@echo off
+timeout /t 3 /nobreak
+del "{exe_name}"
+move "{new_exe_name}" "{exe_name}"
+start "{exe_name}"
+del "%~f0"
+"""
+                with open("update_tool.bat", "w") as f:
+                    f.write(bat_script)
+                
+                print("restarting app...")
+                subprocess.Popen("update_tool.bat", shell=True)
+                os._exit(0)
+            else:
+                 print("Dev mode: Downloaded new exe but cannot auto-replace python script.")
+                 messagebox.showinfo("Dev Mode", f"Downloaded {new_exe_name}. Cannot auto-update .py file.")
+                 
+        except Exception as e:
+            print(f"Update failed: {e}")
+            messagebox.showerror("Update Failed", str(e))
 
 if __name__ == "__main__":
     app = ScraperApp()
