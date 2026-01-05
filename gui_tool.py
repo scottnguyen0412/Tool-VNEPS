@@ -16,7 +16,7 @@ ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.0.2"
+CURRENT_VERSION = "v1.0.3"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
