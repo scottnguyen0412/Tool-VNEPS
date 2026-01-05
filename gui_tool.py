@@ -15,8 +15,16 @@ import scrape_muasamcong
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
+# Resource helper for PyInstaller
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.0.3"
+CURRENT_VERSION = "v1.0.4"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -38,7 +46,7 @@ class ScraperApp(ctk.CTk):
         
         # Logo Logic
         try:
-            logo_path = os.path.join(os.getcwd(), "Image/BSTPharma_Logo.png")
+            logo_path = resource_path("Image/BSTPharma_Logo.png")
             if os.path.exists(logo_path):
                 pil_img = Image.open(logo_path)
                 # Resize to height 50, maintain aspect ratio
