@@ -24,7 +24,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.3.0"
+CURRENT_VERSION = "v1.3.1"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -240,11 +240,16 @@ class ScraperApp(ctk.CTk):
         # Startup Tasks (Update Check etc)
         self.check_for_updates_thread()
         
-        # Simulate delay for UX (so users see the branding)
-        time.sleep(1.5) 
-        
+        # Schedule closing splash (Non-blocking delay)
+        self.after(1500, self.finish_loading)
+
+    def finish_loading(self):
         # Close Splash and Show Main
-        self.splash.destroy()
+        try:
+            self.splash.destroy()
+        except:
+            pass
+            
         self.deiconify()
         
         # Center Main Window (optional)
