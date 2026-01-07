@@ -40,6 +40,7 @@ class ScraperApp(ctk.CTk):
         # Control Logic
         self.pause_event = threading.Event()
         self.pause_event.set() # Default True (Running)
+        self.stop_event = threading.Event()
         
         # Main Grid Layout
         self.grid_columnconfigure(0, weight=1)
@@ -109,11 +110,14 @@ class ScraperApp(ctk.CTk):
         self.browse_btn.grid(row=0, column=2, padx=20, pady=20)
 
         # --- TABS for Filter ---
-        self.tab_view = ctk.CTkTabview(self.settings_card, height=130)
+        self.tab_view = ctk.CTkTabview(self.settings_card, height=160)
         self.tab_view.grid(row=1, column=0, columnspan=3, padx=20, pady=(0, 10), sticky="ew")
         
+        # Increase size of Tab Buttons
+        self.tab_view._segmented_button.configure(font=ctk.CTkFont(size=15, weight="bold"), height=40)
+        
         self.tab_all = self.tab_view.add("Cào Toàn Bộ") # Tab 1
-        self.tab_filter = self.tab_view.add("Cào Theo Bộ") # Tab 2
+        self.tab_filter = self.tab_view.add("Cào Theo Bộ Ngành") # Tab 2
         
         # Tab 1 Content
         ctk.CTkLabel(self.tab_all, text="Chế độ này sẽ cào tất cả dữ liệu (Không lọc theo Bộ).", text_color="gray").pack(pady=20)
@@ -136,10 +140,10 @@ class ScraperApp(ctk.CTk):
 
         # Limit Input (Global)
         self.limit_frame = ctk.CTkFrame(self.settings_card, fg_color="transparent")
-        self.limit_frame.grid(row=2, column=0, columnspan=3, sticky="ew", padx=20, pady=(0, 20))
+        self.limit_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=20, pady=(0, 20))
         
         self.lbl_limit = ctk.CTkLabel(self.limit_frame, text="Giới hạn trang:", font=ctk.CTkFont(weight="bold"))
-        self.lbl_limit.pack(side="left", padx=(20, 10))
+        self.lbl_limit.pack(side="left", padx=(0, 10))
         
         self.limit_entry = ctk.CTkEntry(self.limit_frame, width=100, height=30)
         self.limit_entry.pack(side="left")
@@ -153,27 +157,35 @@ class ScraperApp(ctk.CTk):
         self.action_frame.grid(row=1, column=0, sticky="ew", pady=(0, 20))
         
         # Grid configuration for buttons
-        self.action_frame.grid_columnconfigure(0, weight=3) # Start takes 75%
-        self.action_frame.grid_columnconfigure(1, weight=1) # Pause takes 25%
+        self.action_frame.grid_columnconfigure(0, weight=2) # Start (50%)
+        self.action_frame.grid_columnconfigure(1, weight=1) # Pause (25%)
+        self.action_frame.grid_columnconfigure(2, weight=1) # Reset (25%)
 
         self.start_btn = ctk.CTkButton(self.action_frame, text="START SCRAPING", height=50,
                                        font=ctk.CTkFont(size=16, weight="bold"),
                                        fg_color="#008A80", hover_color="#006960", text_color="white", corner_radius=6,
                                        command=self.start_scraping)
-        self.start_btn.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+        self.start_btn.grid(row=0, column=0, sticky="ew", padx=(0, 5))
 
         self.pause_btn = ctk.CTkButton(self.action_frame, text="PAUSE ⏸", height=50,
                                        font=ctk.CTkFont(size=16, weight="bold"),
                                        fg_color="#E67E22", hover_color="#D35400", text_color="white", corner_radius=6,
                                        state="disabled",
                                        command=self.toggle_pause)
-        self.pause_btn.grid(row=0, column=1, sticky="ew", padx=(0, 0))
+        self.pause_btn.grid(row=0, column=1, sticky="ew", padx=(5, 5))
+        
+        self.reset_btn = ctk.CTkButton(self.action_frame, text="RESET ⟳", height=50,
+                                       font=ctk.CTkFont(size=16, weight="bold"),
+                                       fg_color="#7F8C8D", hover_color="#95A5A6", text_color="white", corner_radius=6,
+                                       command=self.reset_click_handler)
+        self.reset_btn.grid(row=0, column=2, sticky="ew", padx=(5, 0))
 
         # Modern Progress Bar
         self.progress_bar = ctk.CTkProgressBar(self.action_frame, height=14, corner_radius=7, 
-                                             progress_color="#008A80", # Teal (Matches Brand)
-                                             fg_color="#ECF0F1", # Light Gray track
+                                             progress_color="#008A80", 
+                                             fg_color="#ECF0F1", 
                                              border_width=0)
+        # Grid it later
         # Grid it later
         # Pack later when running
 
@@ -271,12 +283,13 @@ class ScraperApp(ctk.CTk):
         self.limit_entry.configure(state="disabled")
         self.status_label.configure(text="Status: Scraping in progress...", text_color="#E67E22")
         
-        # Reset Pause Event
+        # Reset Pause/Stop Event
         self.pause_event.set()
+        self.stop_event.clear()
         
         # Show Progress Bar
         self.progress_bar.context_menu = None 
-        self.progress_bar.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(20, 0))
+        self.progress_bar.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(20, 0))
         self.progress_bar.start()
 
         self.log_area.configure(state="normal")
@@ -288,7 +301,7 @@ class ScraperApp(ctk.CTk):
         start_ministry = ""
         is_sequential = False
         
-        if current_tab == "Cào Theo Bộ":
+        if current_tab == "Cào Theo Bộ Ngành":
             start_ministry = self.combo_ministry.get()
             is_sequential = True if self.chk_sequential.get() == 1 else False
 
@@ -353,7 +366,8 @@ class ScraperApp(ctk.CTk):
                         max_pages=max_pages, 
                         ministry_filter=current_m,
                         search_keyword=kw,
-                        pause_event=self.pause_event
+                        pause_event=self.pause_event,
+                        stop_event=self.stop_event
                     )
                     
                     if kw != keywords_for_ministry[-1]:
@@ -367,6 +381,11 @@ class ScraperApp(ctk.CTk):
             self.status_label.configure(text="Status: Completed ✅")
             messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
             
+        except InterruptedError:
+            print("\n>>> PROCESS STOPPED BY USER.")
+            self.status_label.configure(text="Status: Stopped 🛑", text_color="gray")
+            # No error popup for manual stop
+            
         except Exception as e:
             print(f"\n>>> ERROR: {e}")
             self.status_label.configure(text="Status: Error ❌", text_color="red")
@@ -376,7 +395,7 @@ class ScraperApp(ctk.CTk):
 
     def reset_ui(self):
         self.start_btn.configure(state="normal", text="START SCRAPING", fg_color="#008A80")
-        self.pause_btn.configure(state="disabled", text="PAUSE ⏸", fg_color="#F1C40F", text_color="#333")
+        self.pause_btn.configure(state="disabled", text="PAUSE ⏸", fg_color="#E67E22", text_color="white")
         self.pause_event.set() # Reset to True
         self.path_entry.configure(state="normal")
         self.limit_entry.configure(state="normal")
@@ -386,6 +405,49 @@ class ScraperApp(ctk.CTk):
         # Stop Progress
         self.progress_bar.stop()
         self.progress_bar.grid_forget()
+
+    def reset_click_handler(self):
+        # If running, stop first
+        if self.start_btn._state == "disabled" or self.progress_bar.winfo_ismapped():
+            ans = messagebox.askyesno("Confirm Reset", "Scraping is running. Do you want to STOP and RESET?")
+            if ans:
+                # Signal Stop
+                self.stop_event.set()
+                self.pause_event.set() # Unpause to allow exit
+                self.status_label.configure(text="Status: Stopping...", text_color="red")
+                
+                # We can't immediately reset UI because thread is still winding down.
+                # But for UX, we can just reset inputs. Thread will die eventually.
+                self.reset_inputs()
+                self.reset_ui() # Force UI reset
+        else:
+            self.reset_inputs()
+
+    def reset_inputs(self):
+        # 1. Reset Path
+        default_path = os.path.join(os.getcwd(), "investors_data_detailed.xlsx")
+        self.path_entry.delete(0, tk.END)
+        self.path_entry.insert(0, default_path)
+        
+        # 2. Reset Limit
+        self.limit_entry.delete(0, tk.END)
+        self.limit_entry.insert(0, "0")
+        
+        # 3. Reset Tabs & Ministry
+        self.tab_view.set("Cào Toàn Bộ") # Default tab (need to check name)
+        # Tab names are defined in init. 
+        # Check logic: self.tab_all = self.tab_view.add("Cào Toàn Bộ")
+        # To switch tab, use tab name string.
+        
+        self.combo_ministry.set("Bộ Y tế")
+        self.chk_sequential.select()
+        
+        # 4. Clear Logs
+        self.log_area.configure(state="normal")
+        self.log_area.delete("0.0", tk.END)
+        self.log_area.configure(state="disabled")
+        
+        self.status_label.configure(text="Status: Reset to Defaults.", text_color="gray")
 
     # --- UPDATE LOGIC ---
     def check_for_updates_thread(self):

@@ -10,7 +10,7 @@ import os
 # instead of looking inside the temporary _MEI folder.
 os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
 
-def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="", pause_event=None):
+def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="", pause_event=None, stop_event=None):
     # Handle default arguments if not provided (CLI usage fallback)
     if output_path is None and max_pages is None:
         # User inputs for CLI mode
@@ -59,17 +59,30 @@ def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="",
         except Exception as e:
             print(f"Cảnh báo: Không đọc được file cũ ({e}). Sẽ tạo mới.")
 
-    def check_pause():
+
+    def check_status():
+        # Check Stop
+        if stop_event and stop_event.is_set():
+            print(">>> STOP SIGNAL RECEIVED. Exiting...")
+            raise InterruptedError("Process stopped by user.")
+
+        # Check Pause
         if pause_event:
             if not pause_event.is_set():
                 print(">>> PAUSED. Waiting for resume...")
                 try:
                     pause_event.wait()
+                    
+                    # Re-check stop after waking up
+                    if stop_event and stop_event.is_set():
+                         raise InterruptedError("Process stopped by user.")
+                         
                     print(">>> RESUMED.")
-                    # Re-check internet after long pause
                     print("Checking connection after resume...")
                 except Exception as e:
                     print(f"Pause error: {e}")
+                    if isinstance(e, InterruptedError):
+                        raise e
 
     def wait_for_internet(page):
         while True:
@@ -202,7 +215,7 @@ def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="",
         page_num = 1
         
         while page_num <= max_pages:
-            check_pause() # Check for Pause
+            check_status() # Check Stop/Pause
             print(f"Processing Page {page_num}...")
             wait_for_internet(page)
             
@@ -219,7 +232,7 @@ def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="",
                 break
 
             for i in range(count):
-                check_pause() # Check for Pause (Item Level)
+                check_status() # Check Stop/Pause (Item Level)
                 print(f"  Scraping item {i+1}/{count}...")
                 
                 # Retry mechanism for stale elements
