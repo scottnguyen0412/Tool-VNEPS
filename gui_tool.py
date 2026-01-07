@@ -9,7 +9,7 @@ import json
 import urllib.request
 import subprocess
 import time
-import scrape_muasamcong
+# scrape_muasamcong imported lazily
 
 # Configuration
 ctk.set_appearance_mode("System")
@@ -24,13 +24,17 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.2.2"
+CURRENT_VERSION = "v1.3.0"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
 class ScraperApp(ctk.CTk):
     def __init__(self):
         super().__init__()
+
+        # Hide initially for Splash Screen
+        self.withdraw()
+        self.show_splash()
 
         # Window Configuration
         self.title(f"VN-EPS SCRAPER ({CURRENT_VERSION})")
@@ -45,6 +49,7 @@ class ScraperApp(ctk.CTk):
         self.header_frame.grid(row=0, column=0, sticky="ew")
         
         # Logo Logic
+        self.logo_img = None 
         try:
             logo_path = resource_path("Image/BSTPharma_Logo.png")
             if os.path.exists(logo_path):
@@ -183,8 +188,69 @@ class ScraperApp(ctk.CTk):
         sys.stdout = self
         sys.stderr = self
         
-        # Startup Tasks
-        self.after(2000, self.check_for_updates_thread)
+    def show_splash(self):
+        # Create Splash Screen Window
+        self.splash = ctk.CTkToplevel(self)
+        self.splash.overrideredirect(True) # Remove Title Bar
+        
+        # Dimensions
+        s_width = 400
+        s_height = 250
+        
+        # Center Screen
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x = (screen_width // 2) - (s_width // 2)
+        y = (screen_height // 2) - (s_height // 2)
+        self.splash.geometry(f"{s_width}x{s_height}+{x}+{y}")
+        
+        self.splash.configure(fg_color="#1a1a1a")
+        
+        # Splash Content
+        try:
+             # Try reusing logic for logo if available, or just text
+             pass
+        except:
+             pass
+             
+        # Loading Label
+        ctk.CTkLabel(self.splash, text="VN-EPS SCRAPER", font=ctk.CTkFont(size=24, weight="bold"), text_color="white").pack(pady=(60, 10))
+        ctk.CTkLabel(self.splash, text="Loading resources...", font=ctk.CTkFont(size=14), text_color="gray").pack()
+        
+        # Progress Bar
+        self.splash_progress = ctk.CTkProgressBar(self.splash, width=200, height=10, progress_color="#008A80")
+        self.splash_progress.pack(pady=30)
+        self.splash_progress.start()
+        
+        # Branding
+        ctk.CTkLabel(self.splash, text="IT Boston", font=ctk.CTkFont(size=10), text_color="#555").pack(side="bottom", pady=10)
+        
+        # Force update to show immediately
+        self.splash.update()
+        
+        # Schedule Resource Loading
+        self.after(200, self.load_resources)
+
+    def load_resources(self):
+        # Simulate loading or actual heavy imports
+        # Import heavy libraries here (global lazy import)
+        global scrape_muasamcong
+        import scrape_muasamcong
+        
+        # Startup Tasks (Update Check etc)
+        self.check_for_updates_thread()
+        
+        # Simulate delay for UX (so users see the branding)
+        time.sleep(1.5) 
+        
+        # Close Splash and Show Main
+        self.splash.destroy()
+        self.deiconify()
+        
+        # Center Main Window (optional)
+        self.attributes('-topmost', True)
+        self.attributes('-topmost', False)
+
 
     def browse_file(self):
         filename = filedialog.asksaveasfilename(
