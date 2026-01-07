@@ -24,7 +24,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.2.1"
+CURRENT_VERSION = "v1.2.2"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -420,7 +420,7 @@ class ScraperApp(ctk.CTk):
 timeout /t 3 /nobreak
 del "{exe_name}"
 move "{new_exe_name}" "{exe_name}"
-start "{exe_name}"
+start "" "{exe_name}"
 del "%~f0"
 """
                 with open("update_tool.bat", "w") as f:
