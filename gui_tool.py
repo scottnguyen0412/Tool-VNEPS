@@ -102,16 +102,39 @@ class ScraperApp(ctk.CTk):
                                       command=self.browse_file)
         self.browse_btn.grid(row=0, column=2, padx=20, pady=20)
 
-        # Limit Input
-        self.lbl_limit = ctk.CTkLabel(self.settings_card, text="Page Limit:", font=ctk.CTkFont(weight="bold"))
-        self.lbl_limit.grid(row=1, column=0, padx=20, pady=(0, 20), sticky="w")
+        # --- TABS for Filter ---
+        self.tab_view = ctk.CTkTabview(self.settings_card, height=130)
+        self.tab_view.grid(row=1, column=0, columnspan=3, padx=20, pady=(0, 10), sticky="ew")
         
-        self.limit_entry = ctk.CTkEntry(self.settings_card, width=150, height=35)
-        self.limit_entry.grid(row=1, column=1, padx=10, pady=(0, 20), sticky="w")
+        self.tab_all = self.tab_view.add("Cào Toàn Bộ") # Tab 1
+        self.tab_filter = self.tab_view.add("Cào Theo Bộ") # Tab 2
+        
+        # Tab 1 Content
+        ctk.CTkLabel(self.tab_all, text="Chế độ này sẽ cào tất cả dữ liệu (Không lọc theo Bộ).", text_color="gray").pack(pady=20)
+        
+        # Tab 2 Content
+        self.filter_var = tk.StringVar(value="Bộ Y tế")
+        self.radio_frame = ctk.CTkFrame(self.tab_filter, fg_color="transparent")
+        self.radio_frame.pack(fill="x", padx=20, pady=10)
+        
+        # Radio Buttons for Ministers
+        ctk.CTkRadioButton(self.radio_frame, text="Bộ Y tế", variable=self.filter_var, value="Bộ Y tế").pack(side="left", padx=10)
+        ctk.CTkRadioButton(self.radio_frame, text="Bộ Quốc phòng", variable=self.filter_var, value="Bộ Quốc phòng").pack(side="left", padx=10)
+        ctk.CTkRadioButton(self.radio_frame, text="Bộ Công an", variable=self.filter_var, value="Bộ Công an").pack(side="left", padx=10)
+
+        # Limit Input (Global)
+        self.limit_frame = ctk.CTkFrame(self.settings_card, fg_color="transparent")
+        self.limit_frame.grid(row=2, column=0, columnspan=3, sticky="ew", padx=20, pady=(0, 20))
+        
+        self.lbl_limit = ctk.CTkLabel(self.limit_frame, text="Giới hạn trang:", font=ctk.CTkFont(weight="bold"))
+        self.lbl_limit.pack(side="left", padx=(20, 10))
+        
+        self.limit_entry = ctk.CTkEntry(self.limit_frame, width=100, height=30)
+        self.limit_entry.pack(side="left")
         self.limit_entry.insert(0, "0")
         
-        self.lbl_hint = ctk.CTkLabel(self.settings_card, text="(Enter 0 to scrape ALL pages)", text_color="gray")
-        self.lbl_hint.grid(row=1, column=1, padx=(170, 0), pady=(0, 20), sticky="w")
+        self.lbl_hint = ctk.CTkLabel(self.limit_frame, text="(0 = Scrape ALL)", text_color="gray")
+        self.lbl_hint.pack(side="left", padx=10)
 
         # --- Action Section (Button & Progress) ---
         self.action_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
@@ -213,27 +236,57 @@ class ScraperApp(ctk.CTk):
         self.log_area.delete("0.0", tk.END)
         self.log_area.configure(state="disabled")
 
+        # Get Filter (Ministry)
+        current_tab = self.tab_view.get()
+        ministry_filter = ""
+        if current_tab == "Cào Theo Bộ":
+            ministry_filter = self.filter_var.get()
+
         # Threading
-        t = threading.Thread(target=self.run_process, args=(output_path, max_pages))
+        t = threading.Thread(target=self.run_process, args=(output_path, max_pages, ministry_filter))
         t.daemon = True
         t.start()
     
-    def run_process(self, output_path, max_pages):
+    def run_process(self, output_path, max_pages, ministry_filter):
         try:
             print(">>> INITIALIZING SCRAPER...")
             print(f"> Target File: {output_path}")
             print(f"> Page Limit:  {'Unlimited' if max_pages == float('inf') else max_pages}")
+            print(f"> Ministry Filter: {ministry_filter if ministry_filter else 'ALL'}")
             print("-" * 50)
             
-            scrape_muasamcong.run(output_path=output_path, max_pages=max_pages)
+            # Logic for Specific Ministries requiring sub-keywords
+            # "Bộ Công an" & "Bộ Quốc phòng" need to scrape twice: "bệnh viện" and "y tế"
+            special_keywords = ["bệnh viện", "y tế"]
+            
+            if ministry_filter in ["Bộ Công an", "Bộ Quốc phòng"]:
+                for kw in special_keywords:
+                    print(f"\n>>> Running for: {ministry_filter} + Keyword '{kw}'...")
+                    scrape_muasamcong.run(
+                        output_path=output_path, 
+                        max_pages=max_pages, 
+                        ministry_filter=ministry_filter,
+                        search_keyword=kw
+                    )
+                    time.sleep(2) # Cooldown betwen runs
+            else:
+                # Standard Run (Bộ Y tế or All)
+                # Pass ministry_filter (it might be empty) AND empty keyword
+                scrape_muasamcong.run(
+                    output_path=output_path, 
+                    max_pages=max_pages, 
+                    ministry_filter=ministry_filter, 
+                    search_keyword=""
+                )
             
             print("\n>>> COMPLETED SUCCESSFULLY!")
             self.status_label.configure(text="Status: Completed ✅")
-            messagebox.showinfo("Success", f"Data scraping finished!\nSaved to: {output_path}")
+            messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
+            
         except Exception as e:
             print(f"\n>>> ERROR: {e}")
-            self.status_label.configure(text="Status: Error ❌")
-            messagebox.showerror("Error", f"An error occurred: {e}")
+            self.status_label.configure(text="Status: Error ❌", text_color="red")
+            messagebox.showerror("Error", f"An error occurred:\n{e}")
         finally:
             # Safely reset UI
             self.after(0, self.reset_ui)
@@ -242,6 +295,8 @@ class ScraperApp(ctk.CTk):
         self.start_btn.configure(state="normal", text="START SCRAPING", fg_color="#008A80")
         self.path_entry.configure(state="normal")
         self.limit_entry.configure(state="normal")
+        self.tab_view.configure(state="normal") # Enable tabs
+        self.tab_view.configure(state="normal") # Enable tabs
         
         # Stop Progress
         self.progress_bar.stop()

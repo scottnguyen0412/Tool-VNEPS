@@ -10,7 +10,7 @@ import os
 # instead of looking inside the temporary _MEI folder.
 os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
 
-def run(output_path=None, max_pages=None):
+def run(output_path=None, max_pages=None, ministry_filter="", search_keyword=""):
     # Handle default arguments if not provided (CLI usage fallback)
     if output_path is None and max_pages is None:
         # User inputs for CLI mode
@@ -117,10 +117,52 @@ def run(output_path=None, max_pages=None):
                 browser.close()
                 return
 
-        # Trigger search
-        print("Triggering search...")
-        page.fill(search_input_selector, "")
-        page.press(search_input_selector, "Enter")
+        # 1. Apply Ministry Filter (if provided)
+        if ministry_filter:
+            print(f"Applying Ministry Filter: {ministry_filter}...")
+            try:
+                # Open Filter Panel
+                filter_btn = "button.content__title__searchbar__right"
+                page.click(filter_btn)
+                time.sleep(1)
+                
+                # Select Ministry
+                sel_selector = 'select[placeholder="Chọn Bộ / ban ngành"]'
+                page.wait_for_selector(sel_selector, timeout=5000)
+                page.select_option(sel_selector, label=ministry_filter)
+                
+                # Click Apply
+                apply_btn = page.locator("button.ant-btn-primary").filter(has_text="Áp dụng")
+                if apply_btn.count() > 0:
+                    apply_btn.click()
+                else:
+                    page.click("button.ant-btn-primary")
+                
+                print("Filter applied. Waiting for reload...")
+                time.sleep(3)
+                wait_for_internet(page)
+            except Exception as e:
+                print(f"Warning: Failed to apply ministry filter ({e}). Continuing...")
+
+        # 2. Apply Search Keyword (if provided)
+        # Even if filter is applied, we might want to narrow down by keyword
+        if search_keyword:
+             print(f"Triggering keyword search: '{search_keyword}'...")
+             page.fill(search_input_selector, search_keyword)
+             page.press(search_input_selector, "Enter")
+        elif not ministry_filter:
+             # Triggers empty search only if NO filter and NO keyword (initial state)
+             # But if filter was applied, results are already loaded. 
+             # However, to be safe and ensure "Search" event is fired if needed:
+             pass 
+             # Actually, if we applied filter, the list should update.
+             # If we didn't apply filter (All mode), we need to trigger search to load initial list.
+             print("Triggering empty search to load list...")
+             page.fill(search_input_selector, "")
+             page.press(search_input_selector, "Enter")
+        
+        # Wait for items
+        item_selector = "h2.content__body__item__title"
         
         # Wait for items to appear
         item_selector = "h2.content__body__item__title"
