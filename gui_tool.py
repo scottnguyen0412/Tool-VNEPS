@@ -24,7 +24,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.0.4"
+CURRENT_VERSION = "v1.2.1"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -113,14 +113,20 @@ class ScraperApp(ctk.CTk):
         ctk.CTkLabel(self.tab_all, text="Chế độ này sẽ cào tất cả dữ liệu (Không lọc theo Bộ).", text_color="gray").pack(pady=20)
         
         # Tab 2 Content
-        self.filter_var = tk.StringVar(value="Bộ Y tế")
-        self.radio_frame = ctk.CTkFrame(self.tab_filter, fg_color="transparent")
-        self.radio_frame.pack(fill="x", padx=20, pady=10)
+        self.ministry_frame = ctk.CTkFrame(self.tab_filter, fg_color="transparent")
+        self.ministry_frame.pack(fill="x", padx=20, pady=10)
         
-        # Radio Buttons for Ministers
-        ctk.CTkRadioButton(self.radio_frame, text="Bộ Y tế", variable=self.filter_var, value="Bộ Y tế").pack(side="left", padx=10)
-        ctk.CTkRadioButton(self.radio_frame, text="Bộ Quốc phòng", variable=self.filter_var, value="Bộ Quốc phòng").pack(side="left", padx=10)
-        ctk.CTkRadioButton(self.radio_frame, text="Bộ Công an", variable=self.filter_var, value="Bộ Công an").pack(side="left", padx=10)
+        self.ministries_list = ["Bộ Y tế", "Bộ Quốc phòng", "Bộ Công an"]
+        
+        ctk.CTkLabel(self.ministry_frame, text="Chọn Bộ bắt đầu:", font=ctk.CTkFont(weight="bold")).pack(side="left")
+        
+        self.combo_ministry = ctk.CTkComboBox(self.ministry_frame, values=self.ministries_list, width=200, state="readonly")
+        self.combo_ministry.pack(side="left", padx=10)
+        self.combo_ministry.set("Bộ Y tế")
+        
+        self.chk_sequential = ctk.CTkCheckBox(self.ministry_frame, text="Cào tuần tự các bộ tiếp theo")
+        self.chk_sequential.pack(side="left", padx=20)
+        self.chk_sequential.select() # Default selected
 
         # Limit Input (Global)
         self.limit_frame = ctk.CTkFrame(self.settings_card, fg_color="transparent")
@@ -238,46 +244,82 @@ class ScraperApp(ctk.CTk):
 
         # Get Filter (Ministry)
         current_tab = self.tab_view.get()
-        ministry_filter = ""
+        start_ministry = ""
+        is_sequential = False
+        
         if current_tab == "Cào Theo Bộ":
-            ministry_filter = self.filter_var.get()
+            start_ministry = self.combo_ministry.get()
+            is_sequential = True if self.chk_sequential.get() == 1 else False
 
         # Threading
-        t = threading.Thread(target=self.run_process, args=(output_path, max_pages, ministry_filter))
+        t = threading.Thread(target=self.run_process, args=(output_path, max_pages, start_ministry, is_sequential))
         t.daemon = True
         t.start()
     
-    def run_process(self, output_path, max_pages, ministry_filter):
+    def run_process(self, output_path, max_pages, start_ministry, is_sequential):
         try:
             print(">>> INITIALIZING SCRAPER...")
             print(f"> Target File: {output_path}")
             print(f"> Page Limit:  {'Unlimited' if max_pages == float('inf') else max_pages}")
-            print(f"> Ministry Filter: {ministry_filter if ministry_filter else 'ALL'}")
+            
+            ministries_to_scrape = []
+            
+            # Custom Sequences
+            ministry_sequences = {
+                "Bộ Y tế": ["Bộ Y tế", "Bộ Quốc phòng", "Bộ Công an"],
+                "Bộ Quốc phòng": ["Bộ Quốc phòng", "Bộ Công an", "Bộ Y tế"],
+                "Bộ Công an": ["Bộ Công an", "Bộ Quốc phòng", "Bộ Y tế"]
+            }
+            
+            # Determine list of ministries
+            if start_ministry: # Filter Mode
+                if start_ministry in ministry_sequences:
+                    if is_sequential:
+                        ministries_to_scrape = ministry_sequences[start_ministry]
+                        print(f"> Mode: SEQUENTIAL starting from {start_ministry}")
+                        print(f"> Queue: { ' -> '.join(ministries_to_scrape) }")
+                    else:
+                        ministries_to_scrape = [start_ministry]
+                        print(f"> Mode: SINGLE Ministry ({start_ministry})")
+                else:
+                    ministries_to_scrape = [start_ministry]
+            else:
+                # ALL Mode
+                print("> Mode: ALL DATA (No Filter)")
+                ministries_to_scrape = [""] 
+            
             print("-" * 50)
             
-            # Logic for Specific Ministries requiring sub-keywords
-            # "Bộ Công an" & "Bộ Quốc phòng" need to scrape twice: "bệnh viện" and "y tế"
-            special_keywords = ["bệnh viện", "y tế"]
-            
-            if ministry_filter in ["Bộ Công an", "Bộ Quốc phòng"]:
-                for kw in special_keywords:
-                    print(f"\n>>> Running for: {ministry_filter} + Keyword '{kw}'...")
+            # Main Loop
+            for m_idx, current_m in enumerate(ministries_to_scrape):
+                if current_m:
+                    print(f"\n[{m_idx+1}/{len(ministries_to_scrape)}] Processing Ministry: {current_m}")
+                
+                # Special Logic for Keywords
+                keywords_for_ministry = [""]
+                if current_m in ["Bộ Công an", "Bộ Quốc phòng"]:
+                    keywords_for_ministry = ["bệnh viện", "y tế"]
+                
+                for kw in keywords_for_ministry:
+                    if current_m:
+                        if kw:
+                             print(f"   > Filter: {current_m} | Keyword: '{kw}'")
+                        else:
+                             print(f"   > Filter: {current_m} (No extra keyword)")
+                    
                     scrape_muasamcong.run(
                         output_path=output_path, 
                         max_pages=max_pages, 
-                        ministry_filter=ministry_filter,
+                        ministry_filter=current_m,
                         search_keyword=kw
                     )
-                    time.sleep(2) # Cooldown betwen runs
-            else:
-                # Standard Run (Bộ Y tế or All)
-                # Pass ministry_filter (it might be empty) AND empty keyword
-                scrape_muasamcong.run(
-                    output_path=output_path, 
-                    max_pages=max_pages, 
-                    ministry_filter=ministry_filter, 
-                    search_keyword=""
-                )
+                    
+                    if kw != keywords_for_ministry[-1]:
+                        time.sleep(2)
+                
+                if m_idx < len(ministries_to_scrape) - 1:
+                    print(f"--- Finished {current_m}. Moving to next ministry in 3s... ---")
+                    time.sleep(3)
             
             print("\n>>> COMPLETED SUCCESSFULLY!")
             self.status_label.configure(text="Status: Completed ✅")
@@ -288,7 +330,6 @@ class ScraperApp(ctk.CTk):
             self.status_label.configure(text="Status: Error ❌", text_color="red")
             messagebox.showerror("Error", f"An error occurred:\n{e}")
         finally:
-            # Safely reset UI
             self.after(0, self.reset_ui)
 
     def reset_ui(self):
