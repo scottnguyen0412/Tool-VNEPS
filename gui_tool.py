@@ -5,11 +5,13 @@ from PIL import Image
 import threading
 import sys
 import os
-import json
 import urllib.request
 import subprocess
 import time
-# scrape_muasamcong imported lazily
+
+# Dummy import for PyInstaller detection (ensures scrape_muasamcong is bundled)
+if False:
+    import scrape_muasamcong
 
 # Configuration
 ctk.set_appearance_mode("System")
@@ -24,7 +26,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.3.1"
+CURRENT_VERSION = "v1.3.2"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
