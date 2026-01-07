@@ -5,6 +5,7 @@ from PIL import Image
 import threading
 import sys
 import os
+import json
 import urllib.request
 import subprocess
 import time
@@ -26,7 +27,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.3.2"
+CURRENT_VERSION = "v1.3.3"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
