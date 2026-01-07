@@ -10,7 +10,7 @@ import os
 # instead of looking inside the temporary _MEI folder.
 os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
 
-def run(output_path=None, max_pages=None, ministry_filter="", search_keyword=""):
+def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="", pause_event=None):
     # Handle default arguments if not provided (CLI usage fallback)
     if output_path is None and max_pages is None:
         # User inputs for CLI mode
@@ -58,6 +58,18 @@ def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="")
             print(f"Đã tải {len(processed_items)} nhà đầu tư đã cào trước đó (Check theo: {check_col}).")
         except Exception as e:
             print(f"Cảnh báo: Không đọc được file cũ ({e}). Sẽ tạo mới.")
+
+    def check_pause():
+        if pause_event:
+            if not pause_event.is_set():
+                print(">>> PAUSED. Waiting for resume...")
+                try:
+                    pause_event.wait()
+                    print(">>> RESUMED.")
+                    # Re-check internet after long pause
+                    print("Checking connection after resume...")
+                except Exception as e:
+                    print(f"Pause error: {e}")
 
     def wait_for_internet(page):
         while True:
@@ -190,6 +202,7 @@ def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="")
         page_num = 1
         
         while page_num <= max_pages:
+            check_pause() # Check for Pause
             print(f"Processing Page {page_num}...")
             wait_for_internet(page)
             
@@ -206,6 +219,7 @@ def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="")
                 break
 
             for i in range(count):
+                check_pause() # Check for Pause (Item Level)
                 print(f"  Scraping item {i+1}/{count}...")
                 
                 # Retry mechanism for stale elements

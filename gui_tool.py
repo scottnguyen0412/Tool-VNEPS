@@ -36,6 +36,10 @@ class ScraperApp(ctk.CTk):
         # Window Configuration
         self.title(f"VN-EPS SCRAPER ({CURRENT_VERSION})")
         self.geometry("900x700")
+
+        # Control Logic
+        self.pause_event = threading.Event()
+        self.pause_event.set() # Default True (Running)
         
         # Main Grid Layout
         self.grid_columnconfigure(0, weight=1)
@@ -148,13 +152,29 @@ class ScraperApp(ctk.CTk):
         self.action_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         self.action_frame.grid(row=1, column=0, sticky="ew", pady=(0, 20))
         
-        self.start_btn = ctk.CTkButton(self.action_frame, text="START SCRAPING", height=55,
-                                       font=ctk.CTkFont(size=18, weight="bold"),
-                                       fg_color="#008A80", hover_color="#006960", text_color="white", corner_radius=8,
-                                       command=self.start_scraping)
-        self.start_btn.pack(fill="x")
+        # Grid configuration for buttons
+        self.action_frame.grid_columnconfigure(0, weight=3) # Start takes 75%
+        self.action_frame.grid_columnconfigure(1, weight=1) # Pause takes 25%
 
-        self.progress_bar = ctk.CTkProgressBar(self.action_frame, height=12, mode="indeterminate", progress_color="#4CC144")
+        self.start_btn = ctk.CTkButton(self.action_frame, text="START SCRAPING", height=50,
+                                       font=ctk.CTkFont(size=16, weight="bold"),
+                                       fg_color="#008A80", hover_color="#006960", text_color="white", corner_radius=6,
+                                       command=self.start_scraping)
+        self.start_btn.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+
+        self.pause_btn = ctk.CTkButton(self.action_frame, text="PAUSE ⏸", height=50,
+                                       font=ctk.CTkFont(size=16, weight="bold"),
+                                       fg_color="#E67E22", hover_color="#D35400", text_color="white", corner_radius=6,
+                                       state="disabled",
+                                       command=self.toggle_pause)
+        self.pause_btn.grid(row=0, column=1, sticky="ew", padx=(0, 0))
+
+        # Modern Progress Bar
+        self.progress_bar = ctk.CTkProgressBar(self.action_frame, height=14, corner_radius=7, 
+                                             progress_color="#008A80", # Teal (Matches Brand)
+                                             fg_color="#ECF0F1", # Light Gray track
+                                             border_width=0)
+        # Grid it later
         # Pack later when running
 
         # --- Log Section ---
@@ -214,6 +234,20 @@ class ScraperApp(ctk.CTk):
     def flush(self):
         pass
 
+    def toggle_pause(self):
+        if self.pause_event.is_set():
+            self.pause_event.clear()
+            # Now Paused -> Show Resume Option
+            self.pause_btn.configure(text="RESUME ▶", fg_color="#C0392B", hover_color="#922B21", text_color="white") # Dark Red
+            self.status_label.configure(text="Status: Paused ⏸")
+            print(">>> Signal: PAUSE")
+        else:
+            self.pause_event.set()
+            # Now Running -> Show Pause Option
+            self.pause_btn.configure(text="PAUSE ⏸", fg_color="#E67E22", hover_color="#D35400", text_color="white") # Deep Orange
+            self.status_label.configure(text="Status: Resumed ▶")
+            print(">>> Signal: RESUME")
+
     def start_scraping(self):
         output_path = self.path_entry.get().strip()
         limit_str = self.limit_entry.get().strip()
@@ -231,13 +265,18 @@ class ScraperApp(ctk.CTk):
             return
 
         # UI Updates
-        self.start_btn.configure(state="disabled", text="RUNNING...", fg_color="#e67e22")
+        self.start_btn.configure(state="disabled", text="RUNNING...", fg_color="#5D6D7E")
+        self.pause_btn.configure(state="normal", text="PAUSE ⏸", fg_color="#E67E22", text_color="white")
         self.path_entry.configure(state="disabled")
         self.limit_entry.configure(state="disabled")
-        self.status_label.configure(text="Status: Scraping in progress... Please do not close the browser window.", text_color="#E67E22")
+        self.status_label.configure(text="Status: Scraping in progress...", text_color="#E67E22")
+        
+        # Reset Pause Event
+        self.pause_event.set()
         
         # Show Progress Bar
-        self.progress_bar.pack(fill="x", pady=(15, 0))
+        self.progress_bar.context_menu = None 
+        self.progress_bar.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(20, 0))
         self.progress_bar.start()
 
         self.log_area.configure(state="normal")
@@ -313,7 +352,8 @@ class ScraperApp(ctk.CTk):
                         output_path=output_path, 
                         max_pages=max_pages, 
                         ministry_filter=current_m,
-                        search_keyword=kw
+                        search_keyword=kw,
+                        pause_event=self.pause_event
                     )
                     
                     if kw != keywords_for_ministry[-1]:
@@ -336,6 +376,8 @@ class ScraperApp(ctk.CTk):
 
     def reset_ui(self):
         self.start_btn.configure(state="normal", text="START SCRAPING", fg_color="#008A80")
+        self.pause_btn.configure(state="disabled", text="PAUSE ⏸", fg_color="#F1C40F", text_color="#333")
+        self.pause_event.set() # Reset to True
         self.path_entry.configure(state="normal")
         self.limit_entry.configure(state="normal")
         self.tab_view.configure(state="normal") # Enable tabs
@@ -343,7 +385,7 @@ class ScraperApp(ctk.CTk):
         
         # Stop Progress
         self.progress_bar.stop()
-        self.progress_bar.pack_forget()
+        self.progress_bar.grid_forget()
 
     # --- UPDATE LOGIC ---
     def check_for_updates_thread(self):
