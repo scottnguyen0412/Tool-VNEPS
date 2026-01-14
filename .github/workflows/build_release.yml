@@ -36,12 +36,12 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: dist/Tool_Scrape_Muasamcong.exe
+          files: dist/Tool_Muasamcong_Scrape_Data.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Artifact (for manual runs)
         uses: actions/upload-artifact@v4
         with:
-          name: Tool_Scrape_Muasamcong
-          path: dist/Tool_Scrape_Muasamcong.exe
+          name: Tool_Muasamcong_Scrape_Data
+          path: dist/Tool_Muasamcong_Scrape_Data.exe
