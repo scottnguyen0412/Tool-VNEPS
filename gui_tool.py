@@ -25,7 +25,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.3.4"
+CURRENT_VERSION = "v1.5.3"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -34,7 +34,7 @@ class ScraperApp(ctk.CTk):
         super().__init__()
 
         # Window Configuration
-        self.title(f"VN-EPS SCRAPER ({CURRENT_VERSION})")
+        self.title(f"MUASAMCONG SCRAPER ({CURRENT_VERSION})")
         self.geometry("900x700")
 
         # Control Logic
@@ -71,7 +71,7 @@ class ScraperApp(ctk.CTk):
         self.header_text = ctk.CTkFrame(self.header_frame, fg_color="transparent")
         self.header_text.pack(side="left", pady=10)
 
-        self.header_label = ctk.CTkLabel(self.header_text, text="VN-EPS DATA SCRAPER", 
+        self.header_label = ctk.CTkLabel(self.header_text, text="MUASAMCONG DATA SCRAPER", 
                                        font=ctk.CTkFont(family="Segoe UI", size=20, weight="bold"))
         self.header_label.pack(anchor="w")
         
@@ -206,9 +206,15 @@ class ScraperApp(ctk.CTk):
         self.footer_frame = ctk.CTkFrame(self, height=30, fg_color="transparent")
         self.footer_frame.grid(row=2, column=0, sticky="ew", padx=25, pady=10)
         
-        self.status_label = ctk.CTkLabel(self.footer_frame, text="Status: Ready", anchor="w", font=ctk.CTkFont(weight="bold"))
+        self.status_frame = ctk.CTkFrame(self.footer_frame, fg_color="transparent")
+        self.status_frame.pack(side="left", fill="y")
+
+        self.status_label = ctk.CTkLabel(self.status_frame, text="Status: Ready", font=ctk.CTkFont(size=12, weight="bold"))
         self.status_label.pack(side="left")
         
+        self.timer_label = ctk.CTkLabel(self.status_frame, text="00:00", font=ctk.CTkFont(family="Consolas", size=12))
+        self.timer_label.pack(side="right", padx=10)
+
         self.footer_branding = ctk.CTkLabel(self.footer_frame, text="Made with ❤️ by IT Boston", 
                                           font=ctk.CTkFont(size=12, slant="italic"), text_color="gray")
         self.footer_branding.pack(side="right")
@@ -283,6 +289,11 @@ class ScraperApp(ctk.CTk):
         self.limit_entry.configure(state="disabled")
         self.status_label.configure(text="Status: Scraping in progress...", text_color="#E67E22")
         
+        # Start Timer
+        self.timer_running = True
+        self.job_start_time = time.time()
+        self.update_timer()
+        
         # Reset Pause/Stop Event
         self.pause_event.set()
         self.stop_event.clear()
@@ -311,6 +322,7 @@ class ScraperApp(ctk.CTk):
         t.start()
     
     def run_process(self, output_path, max_pages, start_ministry, is_sequential):
+        start_time = time.time()
         try:
             print(">>> INITIALIZING SCRAPER...")
             print(f"> Target File: {output_path}")
@@ -378,19 +390,28 @@ class ScraperApp(ctk.CTk):
                     time.sleep(3)
             
             print("\n>>> COMPLETED SUCCESSFULLY!")
+            self.timer_running = False # Stop timer immediately
             self.status_label.configure(text="Status: Completed ✅")
             messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
             
         except InterruptedError:
+            self.timer_running = False # Stop timer
             print("\n>>> PROCESS STOPPED BY USER.")
             self.status_label.configure(text="Status: Stopped 🛑", text_color="gray")
             # No error popup for manual stop
             
         except Exception as e:
+            self.timer_running = False # Stop timer
             print(f"\n>>> ERROR: {e}")
             self.status_label.configure(text="Status: Error ❌", text_color="red")
             messagebox.showerror("Error", f"An error occurred:\n{e}")
         finally:
+            elapsed_time = time.time() - start_time
+            m, s = divmod(int(elapsed_time), 60)
+            h, m = divmod(m, 60)
+            time_str = f"{h}h {m}m {s}s" if h > 0 else f"{m}m {s}s"
+            print(f">>> TOTAL EXECUTION TIME: {time_str}")
+            
             self.after(0, self.reset_ui)
 
     def reset_ui(self):
@@ -405,6 +426,21 @@ class ScraperApp(ctk.CTk):
         # Stop Progress
         self.progress_bar.stop()
         self.progress_bar.grid_forget()
+        
+        self.timer_running = False # Stop Timer Loop
+
+    def update_timer(self):
+        if self.timer_running:
+            elapsed = time.time() - self.job_start_time
+            m, s = divmod(int(elapsed), 60)
+            h, m = divmod(m, 60)
+            if h > 0:
+                time_str = f"{h:02}:{m:02}:{s:02}"
+            else:
+                time_str = f"{m:02}:{s:02}"
+            
+            self.timer_label.configure(text=f"⏱ {time_str}")
+            self.after(1000, self.update_timer)
 
     def reset_click_handler(self):
         # If running, stop first
