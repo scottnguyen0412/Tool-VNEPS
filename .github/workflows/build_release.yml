@@ -30,7 +30,7 @@ jobs:
 
       - name: Build EXE
         run: |
-          python -m PyInstaller --noconfirm --onefile --windowed --name "Tool_Scrape_Muasamcong" --collect-all customtkinter --collect-all playwright --collect-all pandas --collect-all openpyxl --hidden-import=requests --add-data "Image;Image" --icon=NONE gui_tool.py
+          python -m PyInstaller --noconfirm --onefile --windowed --name "Tool_Muasamcong_Scrape_Data" --collect-all customtkinter --collect-all playwright --collect-all pandas --collect-all openpyxl --hidden-import=requests --add-data "Image;Image" --icon="Image/BST_Pharma_ICO.ico" gui_tool.py
 
       - name: Create Release
         uses: softprops/action-gh-release@v1

@@ -25,7 +25,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.5.3"
+CURRENT_VERSION = "v1.5.5"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -34,8 +34,19 @@ class ScraperApp(ctk.CTk):
         super().__init__()
 
         # Window Configuration
-        self.title(f"MUASAMCONG SCRAPER ({CURRENT_VERSION})")
+        self.title(f"Tool Muasamcong Scrape Data ({CURRENT_VERSION})")
         self.geometry("900x700")
+        
+        # Set Icon
+        try:
+             # Ensure correct path separator and existence
+             icon_path = resource_path("Image/BST_Pharma_ICO.ico")
+             if os.path.exists(icon_path):
+                 self.iconbitmap(icon_path)
+             else:
+                 print(f"Icon not found at: {icon_path}")
+        except Exception as e:
+             print(f"Warning: Could not set icon ({e})")
 
         # Control Logic
         self.pause_event = threading.Event()
