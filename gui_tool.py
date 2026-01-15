@@ -129,6 +129,40 @@ class ScraperApp(ctk.CTk):
         
         self.tab_all = self.tab_view.add("Cào Toàn Bộ") # Tab 1
         self.tab_filter = self.tab_view.add("Cào Theo Bộ Ngành") # Tab 2
+        self.tab_contractor = self.tab_view.add("Kết Quả Đấu Thầu") # Tab 3
+        
+        # --- Tab 3 Content (Contractor Results) ---
+        self.contractor_frame = ctk.CTkFrame(self.tab_contractor, fg_color="transparent")
+        self.contractor_frame.pack(fill="both", padx=10, pady=5)
+        
+        # Keywords
+        ctk.CTkLabel(self.contractor_frame, text="Từ khóa (mặc định):").pack(anchor="w")
+        self.entry_keywords = ctk.CTkEntry(self.contractor_frame, height=30)
+        self.entry_keywords.pack(fill="x", pady=(0, 5))
+        self.entry_keywords.insert(0, "thuốc, generic, tân dược, biệt dược, bệnh viện, chữa bệnh, vật tư y tế...")
+        
+        # Exclude
+        ctk.CTkLabel(self.contractor_frame, text="Từ loại trừ:").pack(anchor="w")
+        self.entry_exclude = ctk.CTkEntry(self.contractor_frame, height=30)
+        self.entry_exclude.pack(fill="x", pady=(0, 5))
+        self.entry_exclude.insert(0, "linh kiện, xây dựng, cải tạo, lắp đặt, thi công")
+
+        # Date Range
+        self.date_frame = ctk.CTkFrame(self.contractor_frame, fg_color="transparent")
+        self.date_frame.pack(fill="x", pady=5)
+        
+        # From Date
+        ctk.CTkLabel(self.date_frame, text="Từ ngày (dd/mm/yyyy):").pack(side="left", padx=(0, 5))
+        self.entry_from_date = ctk.CTkEntry(self.date_frame, width=100)
+        self.entry_from_date.pack(side="left", padx=(0, 10))
+        
+        # To Date
+        ctk.CTkLabel(self.date_frame, text="Đến ngày:").pack(side="left", padx=(0, 5))
+        self.entry_to_date = ctk.CTkEntry(self.date_frame, width=100)
+        self.entry_to_date.pack(side="left")
+
+        ctk.CTkLabel(self.contractor_frame, text="* Tự động chọn Field: Hàng hóa, Search By: Thuốc/Dược liệu", 
+                     text_color="gray", font=ctk.CTkFont(size=11)).pack(anchor="w")
         
         # Tab 1 Content
         ctk.CTkLabel(self.tab_all, text="Chế độ này sẽ cào tất cả dữ liệu (Không lọc theo Bộ).", text_color="gray").pack(pady=20)
@@ -318,28 +352,60 @@ class ScraperApp(ctk.CTk):
         self.log_area.delete("0.0", tk.END)
         self.log_area.configure(state="disabled")
 
-        # Get Filter (Ministry)
+        # Get Filter (Ministry) or Contractor Mode
         current_tab = self.tab_view.get()
         start_ministry = ""
         is_sequential = False
+        mode = "NORMAL"
+        kw = ""
+        exclude = ""
+        from_date = ""
+        to_date = ""
         
         if current_tab == "Cào Theo Bộ Ngành":
             start_ministry = self.combo_ministry.get()
             is_sequential = True if self.chk_sequential.get() == 1 else False
+        elif current_tab == "Kết Quả Đấu Thầu":
+            mode = "CONTRACTOR"
+            kw = self.entry_keywords.get()
+            exclude = self.entry_exclude.get()
+            from_date = self.entry_from_date.get().strip()
+            to_date = self.entry_to_date.get().strip()
+            
+            # Handle placeholder text if user didn't change it (optional, but good UX)
+            if "..." in kw: kw = "" # Let backend handle default
+            if "..." in exclude: exclude = "" 
 
         # Threading
-        t = threading.Thread(target=self.run_process, args=(output_path, max_pages, start_ministry, is_sequential))
+        t = threading.Thread(target=self.run_process, args=(output_path, max_pages, start_ministry, is_sequential, mode, kw, exclude, from_date, to_date))
         t.daemon = True
         t.start()
     
-    def run_process(self, output_path, max_pages, start_ministry, is_sequential):
+    def run_process(self, output_path, max_pages, start_ministry, is_sequential, mode="NORMAL", kw="", exclude="", from_date="", to_date=""):
         start_time = time.time()
         try:
             print(">>> INITIALIZING SCRAPER...")
             print(f"> Target File: {output_path}")
             print(f"> Page Limit:  {'Unlimited' if max_pages == float('inf') else max_pages}")
             
-            ministries_to_scrape = []
+            if mode == "CONTRACTOR":
+                scrape_muasamcong.run_contractor_selection(
+                    output_path=output_path,
+                    max_pages=max_pages,
+                    keywords=kw,
+                    exclude_words=exclude,
+                    from_date=from_date,
+                    to_date=to_date,
+                    pause_event=self.pause_event,
+                    stop_event=self.stop_event
+                )
+                print("\n>>> COMPLETED SUCCESSFULLY!")
+                self.timer_running = False
+                self.status_label.configure(text="Status: Completed ✅")
+                messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
+                return
+            else:
+                ministries_to_scrape = []
             
             # Custom Sequences
             ministry_sequences = {

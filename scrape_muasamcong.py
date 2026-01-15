@@ -567,5 +567,342 @@ def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="",
         browser.close()
         print("Scraping completed.")
 
+def run_contractor_selection(output_path=None, max_pages=None, keywords="", exclude_words="", from_date="", to_date="", pause_event=None, stop_event=None):
+    """
+    Function to scrape Contractor Selection Results (Kết quả lựa chọn nhà thầu).
+    Specific logic for:
+    - URL: https://muasamcong.mpi.gov.vn/web/guest/contractor-selection?render=search
+    - Match Type: "Khớp từ hoặc một số từ"
+    - Search By: "Thông báo mời thầu thuốc, dược liệu..."
+    - Field: "Hàng hóa"
+    - Date Range: "Thời gian đăng tải"
+    """
+    import os
+    
+    # 1. Setup Defaults
+    if output_path is None:
+        output_path = "contractor_results.xlsx"
+    if not output_path.endswith(".xlsx"):
+        output_path += ".xlsx"
+    if max_pages is None:
+        max_pages = float('inf')
+
+    # Default Keywords if empty (as per user request reference)
+    default_keywords = "thuốc, generic, tân dược, biệt dược, bệnh viện, chữa bệnh, vật tư y tế, điều trị, bệnh nhân, thiết bị y tế, khám chữa bệnh, khám bệnh, chữa bệnh, dược liệu, dược"
+    # Note: "Thông báo mời thầu thuốc..." is a Search By option, not a keyword.
+    
+    default_exclude = "linh kiện, xây dựng, cải tạo, lắp đặt, thi công"
+    
+    if not keywords:
+        keywords = default_keywords
+    if not exclude_words:
+        exclude_words = default_exclude
+
+    print(f"--- Starting Contractor Selection Scrape ---")
+    print(f"File: {output_path}")
+    print(f"Keywords: {keywords[:50]}...")
+    print(f"Exclude: {exclude_words}")
+    if from_date or to_date:
+        print(f"Date Range: {from_date} - {to_date}")
+
+    # 2. Check Existing Data
+    processed_items = set()
+    all_data = []
+    if os.path.exists(output_path):
+        try:
+            df = pd.read_excel(output_path)
+            # Use 'Mã TBMT/Gói thầu' or check col "Số TBMT"
+            check_col = "Số TBMT"
+            if check_col not in df.columns:
+                 # Try to find a unique column
+                 possible_cols = ["Mã KQLCNT", "Số TBMT", "Tên gói thầu"]
+                 for c in possible_cols:
+                     if c in df.columns:
+                         check_col = c
+                         break
+            
+            if check_col in df.columns:
+                processed_items = set(df[check_col].dropna().astype(str).str.strip())
+                all_data = df.to_dict('records')
+            print(f"Loaded {len(processed_items)} existing items (Check col: {check_col}).")
+        except Exception as e:
+            print(f"Warning: Could not read existing file: {e}")
+
+    # 3. Helpers
+    def check_status():
+        if stop_event and stop_event.is_set():
+            raise InterruptedError("Stopped by user.")
+        if pause_event and not pause_event.is_set():
+            print(">>> PAUSED...")
+            pause_event.wait()
+            if stop_event and stop_event.is_set():
+                 raise InterruptedError("Stopped by user.")
+            print(">>> RESUMED.")
+
+    def wait_for_internet(page):
+        while True:
+            try:
+                if page.evaluate("navigator.onLine"): return
+            except: pass
+            print("Waiting for internet...")
+            time.sleep(5)
+
+    # 4. Playwright Execution
+    with sync_playwright() as p:
+        # Browser Launch
+        browser = None
+        try:
+            browser = p.chromium.launch(headless=False, channel="chrome")
+        except:
+            try:
+                browser = p.chromium.launch(headless=False, channel="msedge")
+            except:
+                 browser = p.chromium.launch(headless=False)
+        
+        context = browser.new_context(viewport={"width": 1366, "height": 768}, ignore_https_errors=True)
+        page = context.new_page()
+
+        # Navigate
+        print("Navigating to Contractor Selection Search...")
+        url = "https://muasamcong.mpi.gov.vn/web/guest/contractor-selection?render=search"
+        try:
+            page.goto(url, timeout=60000)
+        except:
+            wait_for_internet(page)
+            page.reload()
+
+        # 5. Fill Search Form
+        try:
+            print("Configuring search criteria...")
+            check_status()
+            
+            # Wait for form to load
+            page.wait_for_selector('input[placeholder*="TBMT"]', timeout=30000)
+
+            # 1. Select "Tìm theo": "Thông báo mời thầu thuốc, dược liệu..."
+            # Click Dropdown
+            dropdown = page.locator('.ant-select-selection--single').first
+            dropdown.click()
+            time.sleep(1)
+            # Click Option
+            option = page.locator("li.ant-select-dropdown-menu-item").filter(has_text="Thông báo mời thầu thuốc, dược liệu")
+            if option.count() > 0:
+                option.first.click()
+                print("Selected Search By: Medicine")
+            else:
+                print("Warning: Could not find 'Medicine' search option.")
+            
+            time.sleep(1)
+
+            # 2. Select Field: "Hàng hóa"
+            # It's a checkbox with id="HH" usually, or find by label
+            hh_cb = page.locator('input#HH')
+            if hh_cb.count() > 0:
+                if not hh_cb.is_checked():
+                     hh_cb.click()
+            else:
+                # Try by text
+                page.locator("label").filter(has_text="Hàng hóa").click()
+            print("Selected Field: Goods")
+            
+            time.sleep(1)
+
+            # 3. Enter Keywords
+            # Input 1: Keywords
+            key_input = page.locator('input[placeholder*="TBMT"]') 
+            key_input.fill(keywords)
+
+            # Input 2: Exclude
+            exclude_input = page.locator('input[placeholder*="Áp dụng cho tất cả"]') 
+            exclude_input.fill(exclude_words)
+            
+            # 4. Use Date Range if provided (Fix for Readonly)
+            if from_date or to_date:
+                print(f"Setting Date Range: {from_date} - {to_date}")
+                try:
+                    # Find inputs with placeholder 'dd/mm/yyyy'
+                    dates = page.locator('input[placeholder="dd/mm/yyyy"]')
+                    
+                    if dates.count() >= 2:
+                        # Start Date
+                        if from_date:
+                            start_inp = dates.nth(0)
+                            start_inp.click() # Focus
+                            time.sleep(0.5)
+                            # Use keyboard type instead of fill because element is readonly
+                            page.keyboard.type(from_date, delay=100)
+                            page.keyboard.press("Enter")
+                            time.sleep(0.5)
+                            
+                        # End Date
+                        if to_date:
+                            end_inp = dates.nth(1)
+                            end_inp.click() # Focus 
+                            time.sleep(0.5)
+                            page.keyboard.type(to_date, delay=100)
+                            page.keyboard.press("Enter")
+                            time.sleep(0.5)
+                    else:
+                        print("Warning: Could not find date inputs with placeholder 'dd/mm/yyyy'.")
+
+                except Exception as e:
+                    print(f"Error setting dates: {e}")
+
+            # 5. Select Match Type: "Khớp từ hoặc một số từ" (Radio 3)
+            # Do this LAST to ensure it doesn't get reset by other changes
+            try:
+                # Find label containing text and click it
+                match_label = page.locator("label").filter(has_text="Khớp từ hoặc một số từ (Phân biệt dấu)")
+                if match_label.count() > 0:
+                    match_label.click()
+                    print("Selected Match Type: 'Khớp từ hoặc một số từ (Phân biệt dấu)'")
+                else:
+                    # Retry with xpath specific to text
+                    print("Label not found with simple filter, trying xpath...")
+                    page.locator('//label[contains(text(), "Khớp từ hoặc một số từ (Phân biệt dấu)")]').click()
+            except Exception as e:
+                print(f"Error selecting match type: {e}. Trying index...")
+                try: page.locator('input[type="radio"]').nth(2).click()
+                except: pass
+
+            # E. Click Search
+
+            # E. Click Search
+            print("Clicking Search...")
+            search_btn = page.locator("button.content__footer__btn").filter(has_text="Tìm kiếm")
+            search_btn.click()
+            
+            # Wait for results
+            print("Waiting for results...")
+            time.sleep(3) # Initial wait
+            
+            item_selector = ".content__body__list__item"
+            try:
+                page.wait_for_selector(item_selector, timeout=30000)
+            except:
+                print("No results found or timeout.")
+                browser.close()
+                return
+
+        except Exception as e:
+            print(f"Error setting up search: {e}")
+            browser.close()
+            return
+
+        # 6. Scraping Loop
+        page_num = 1
+        while page_num <= max_pages:
+            check_status()
+            print(f"--- Processing Page {page_num} ---")
+            wait_for_internet(page)
+            
+            items = page.locator(item_selector)
+            count = items.count()
+            print(f"Found {count} items.")
+            
+            if count == 0:
+                break
+
+            for i in range(count):
+                check_status()
+                print(f"  Scraping item {i+1}/{count}...")
+                
+                retry = 0
+                skipped = False
+                while retry < 3:
+                    try:
+                        # Re-locate
+                        item = page.locator(item_selector).nth(i)
+                        
+                        # Get Title to check duplicate
+                        title_el = item.locator("h5 a, a.content__body__list__item__title")
+                        if title_el.count() == 0:
+                             title_el = item.locator("a").first 
+                        
+                        title_text = title_el.inner_text().strip()
+                        item_id = title_text 
+                        
+                        if item_id in processed_items:
+                            print(f"    Skipping duplicate: {item_id}")
+                            skipped = True
+                            break
+                        
+                        # Click to Open
+                        title_el.click()
+                        
+                        # Wait for detail
+                        try:
+                            page.wait_for_selector(".btn-back, .content-body__header", timeout=15000)
+                        except:
+                            print("    Timeout loading detail. Retrying click...")
+                            page.reload() 
+                            raise Exception("Detail load timeout")
+
+                        # --- SCRAPE DETAIL ---
+                        detail_data = {"Entity Name": title_text, "Link": page.url}
+                        
+                        # Use a generic scraper for rows/cols similar to existing function
+                        rows = page.locator(".row, .infomation-course__content")
+                        for r_idx in range(rows.count()):
+                            row = rows.nth(r_idx)
+                            try:
+                                txt = row.inner_text().strip()
+                                parts = txt.split(":", 1)
+                                if len(parts) == 2:
+                                    lab = parts[0].strip()
+                                    val = parts[1].strip()
+                                    if lab and val:
+                                        detail_data[lab] = val
+                            except:
+                                pass
+
+                        all_data.append(detail_data)
+                        print(f"    Collected: {title_text}")
+                        
+                        processed_items.add(item_id)
+
+                        # GO BACK
+                        back_btn = page.locator("button.btn-back")
+                        if back_btn.count() > 0:
+                            back_btn.click()
+                        else:
+                            page.go_back()
+                        
+                        # Wait for list
+                        page.wait_for_selector(item_selector, timeout=15000)
+                        break
+
+                    except Exception as e:
+                        print(f"    Error: {e}. Retrying...")
+                        retry += 1
+                        if "Detail" in str(e) or page.url != url:
+                            page.go_back()
+                            try: page.wait_for_selector(item_selector, timeout=10000)
+                            except: page.goto(url); 
+                        time.sleep(2)
+                
+                time.sleep(1)
+
+            # Save
+            try:
+                pd.DataFrame(all_data).to_excel(output_path, index=False)
+                print(f"  Saved progress to {output_path}")
+            except Exception as e:
+                print(f"  Save error: {e}")
+
+            # Next Page
+            next_btn = page.locator("button.btn-next").first
+            if next_btn.count() > 0 and not next_btn.is_disabled():
+                print("Next page...")
+                next_btn.click()
+                time.sleep(3)
+                page.wait_for_selector(item_selector, timeout=20000)
+                page_num += 1
+            else:
+                print("End of pages.")
+                break
+        
+        browser.close()
+
 if __name__ == "__main__":
     run()
