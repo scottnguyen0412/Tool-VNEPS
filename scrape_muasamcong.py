@@ -200,7 +200,15 @@ def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="",
         except:
             print("No items found after search. Retrying...")
             wait_for_internet(page)
-            page.reload()
+            # Robust Reload
+            for _ in range(3):
+                try:
+                    page.reload(timeout=60000)
+                    break 
+                except Exception as e:
+                    print(f"Reload failed: {e}. Retrying...")
+                    wait_for_internet(page)
+                    time.sleep(2)
             # Need to search again?
              # Trigger search again
             try:
