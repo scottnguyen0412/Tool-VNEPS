@@ -775,157 +775,224 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
             # Wait for results
             print("Waiting for results...")
             time.sleep(3) # Initial wait
-            
-            # F. Select 50 items per page
-            # Look for the select element which is standard for this table
-            try:
-                # The select is usually at the bottom or top of the list
-                # Based on inspection: it is a <select> element.
-                # We can try to finding it by structure or just 'select' if unique in that context
-                # "20 / trang", "50 / trang" usually
-                
-                # Wait for select to appear
-                page.wait_for_selector('select', timeout=10000)
-                
-                # Check current value
-                # Select option "50"
-                print("Selecting 50 items/page...")
-                select_el = page.locator('select').first
-                select_el.select_option("50")
-                
-                # Wait for reload
-                time.sleep(3)
-                print("Page size updated to 50.")
-                
-            except Exception as e:
-                print(f"Warning: Could not select 50 items/page: {e}")
-
-            item_selector = ".content__body__list__item"
-            try:
-                page.wait_for_selector(item_selector, timeout=30000)
-            except:
-                print("No results found or timeout.")
-                browser.close()
-                return
-
         except Exception as e:
-            print(f"Error setting up search: {e}")
+            print(f"Error setting up search (Form Fill): {e}")
             browser.close()
             return
-
-        # 6. Scraping Loop
-        page_num = 1
-        while page_num <= max_pages:
-            check_status()
-            print(f"--- Processing Page {page_num} ---")
-            wait_for_internet(page)
             
-            items = page.locator(item_selector)
-            count = items.count()
-            print(f"Found {count} items.")
-            
-            if count == 0:
-                break
-
-            for i in range(count):
-                check_status()
-                print(f"  Scraping item {i+1}/{count}...")
-                
-                retry = 0
-                skipped = False
-                while retry < 3:
-                    try:
-                        # Re-locate
-                        item = page.locator(item_selector).nth(i)
-                        
-                        # Get Title to check duplicate
-                        title_el = item.locator("h5 a, a.content__body__list__item__title")
-                        if title_el.count() == 0:
-                             title_el = item.locator("a").first 
-                        
-                        title_text = title_el.inner_text().strip()
-                        item_id = title_text 
-                        
-                        if item_id in processed_items:
-                            print(f"    Skipping duplicate: {item_id}")
-                            skipped = True
-                            break
-                        
-                        # Click to Open
-                        title_el.click()
-                        
-                        # Wait for detail
-                        try:
-                            page.wait_for_selector(".btn-back, .content-body__header", timeout=15000)
-                        except:
-                            print("    Timeout loading detail. Retrying click...")
-                            page.reload() 
-                            raise Exception("Detail load timeout")
-
-                        # --- SCRAPE DETAIL ---
-                        detail_data = {"Entity Name": title_text, "Link": page.url}
-                        
-                        # Use a generic scraper for rows/cols similar to existing function
-                        rows = page.locator(".row, .infomation-course__content")
-                        for r_idx in range(rows.count()):
-                            row = rows.nth(r_idx)
-                            try:
-                                txt = row.inner_text().strip()
-                                parts = txt.split(":", 1)
-                                if len(parts) == 2:
-                                    lab = parts[0].strip()
-                                    val = parts[1].strip()
-                                    if lab and val:
-                                        detail_data[lab] = val
-                            except:
-                                pass
-
-                        all_data.append(detail_data)
-                        print(f"    Collected: {title_text}")
-                        
-                        processed_items.add(item_id)
-
-                        # GO BACK
-                        back_btn = page.locator("button.btn-back")
-                        if back_btn.count() > 0:
-                            back_btn.click()
-                        else:
-                            page.go_back()
-                        
-                        # Wait for list
-                        page.wait_for_selector(item_selector, timeout=15000)
-                        break
-
-                    except Exception as e:
-                        print(f"    Error: {e}. Retrying...")
-                        retry += 1
-                        if "Detail" in str(e) or page.url != url:
-                            page.go_back()
-                            try: page.wait_for_selector(item_selector, timeout=10000)
-                            except: page.goto(url); 
-                        time.sleep(2)
-                
-                time.sleep(1)
-
-            # Save
-            try:
-                pd.DataFrame(all_data).to_excel(output_path, index=False)
-                print(f"  Saved progress to {output_path}")
-            except Exception as e:
-                print(f"  Save error: {e}")
-
-            # Next Page
-            next_btn = page.locator("button.btn-next").first
-            if next_btn.count() > 0 and not next_btn.is_disabled():
-                print("Next page...")
-                next_btn.click()
-                time.sleep(3)
-                page.wait_for_selector(item_selector, timeout=20000)
-                page_num += 1
-            else:
-                print("End of pages.")
-                break
+        # 6. API Scraping Loop
+        # We need to capture the API token and the base payload from the initial search
+        # The easiest way is to wait for the request after clicking search
         
+        api_url = None
+        base_payload = None
+        
+        try:
+             # Wait for the specific API request
+             with page.expect_request(lambda request: "services/smart/search" in request.url and request.method == "POST", timeout=10000) as first_req:
+                 # Check if request happens naturally or if we need to wait
+                 pass
+             
+             api_url = first_req.value.url
+             base_payload = first_req.value.post_data_json
+             print(f"Captured API URL: {api_url}")
+             
+        except:
+             # If we missed the event (because it happened too fast), try to search again or just look at last requests
+             print("Missed initial API capture, clicking search again...")
+             try:
+                 search_btn.click()
+                 with page.expect_request(lambda request: "services/smart/search" in request.url and request.method == "POST") as first_req:
+                     pass
+                 api_url = first_req.value.url
+                 base_payload = first_req.value.post_data_json
+             except Exception as e:
+                 print(f"Could not capture API: {e}")
+                 browser.close()
+                 return
+
+        if not api_url or not base_payload:
+            print("Failed to configure API scraper.")
+            browser.close()
+            return
+            
+        print("API Scraper Configured. Starting batch processing...")
+        
+        # Override page number and size
+        
+        # Modify payload for high volume
+        # The payload is typically a List: [{"pageSize": 10, "pageNumber": 0, "query": [...]}]
+        
+        current_payload_obj = base_payload[0] if isinstance(base_payload, list) else base_payload
+        current_payload_obj["pageSize"] = 50
+        
+        page_num = 0
+        total_fetched = 0
+        
+        # Setup API Context
+        api_context = context.request
+        
+        while True:
+            check_status() # Pause/Stop support
+            
+            # Update Page Number
+            current_payload_obj["pageNumber"] = page_num
+            final_payload = [current_payload_obj] if isinstance(base_payload, list) else current_payload_obj
+            
+            print(f"--- Fetching API Page {page_num} (Size: 50) ---")
+            
+            retry = 0
+            response_json = None
+            
+            while retry < 3:
+                try:
+                    # POST request
+                    resp = api_context.post(api_url, data=final_payload)
+                    if resp.ok:
+                        response_json = resp.json()
+                        break
+                    else:
+                        print(f"API Error {resp.status}: {resp.status_text}")
+                        time.sleep(2)
+                        retry += 1
+                except Exception as e:
+                     print(f"Request failed: {e}")
+                     time.sleep(2)
+                     retry += 1
+            
+            if not response_json:
+                print("Failed to get response after retries. Stop.")
+                break
+            
+            # Extract Items
+            items = []
+            try:
+                # Handle possible structures
+                if "page" in response_json and "content" in response_json["page"]:
+                    items = response_json["page"]["content"]
+                elif "content" in response_json:
+                    items = response_json["content"]
+                elif isinstance(response_json, list):
+                     items = response_json
+            except: pass
+            
+            if not items:
+                print("No items in response. End of items.")
+                break
+                
+            print(f"  Got {len(items)} items from API.")
+            
+            # Process Items
+            batch_data = []
+            for item in items:
+                # Mapping
+                # Mã TBMT = notifyNo
+                # Tên gói thầu = bidName (can be array or string)
+                # Chủ đầu tư = investorName
+                # Ngày đăng tải thông báo = originalPublicDate
+                # Lĩnh vực = investField (Array)
+                # Địa điểm = locations (Array of objects? subagent said distName + provName)
+                # Thời điểm đóng thầu = bidCloseDate
+                # Hình thức dự thầu = isInternet (1=QM)
+                # Trạng thái = status
+                
+                try:
+                    # Bid Name
+                    bid_name = item.get("bidName", "")
+                    if isinstance(bid_name, list):
+                        bid_name = "; ".join(bid_name)
+                    
+                    # Invest Field
+                    inv_field = item.get("investField", "")
+                    if isinstance(inv_field, list):
+                        inv_field = ", ".join(inv_field)
+                    if inv_field == "HH": inv_field = "Hàng hóa"
+                    elif inv_field == "XL": inv_field = "Xây lắp"
+                    elif inv_field == "PTV": inv_field = "Phi tư vấn"
+                    
+                    # Location
+                    loc_str = ""
+                    locs = item.get("locations", [])
+                    if locs and isinstance(locs, list):
+                        # Assuming objects with distName, provName or just strings
+                        l_parts = []
+                        for l in locs:
+                            if isinstance(l, dict):
+                                d = l.get("districtName", "")
+                                p = l.get("provName", "")
+                                l_parts.append(f"{d} - {p}")
+                            else:
+                                l_parts.append(str(l))
+                        loc_str = "; ".join(l_parts)
+                    
+                    # Internet
+                    # isInternet can be 1 or 0
+                    is_net = item.get("isInternet", 0)
+                    hinh_thuc = "Qua mạng" if str(is_net) == "1" else "Không qua mạng"
+                    
+                    # Status
+                    st_code = item.get("status", "")
+                    st_map = {
+                        "01": "Chưa đóng thầu",
+                        "OPEN_BID": "Đang xét thầu", 
+                        "IS_PUBLISH": "Có nhà trúng thầu",
+                        "CANCEL_BID": "Đã hủy thầu"
+                    }
+                    trang_thai = st_map.get(str(st_code), str(st_code))
+
+                    # Date Formatting
+                    def format_date_str(iso_str):
+                        if not iso_str: return ""
+                        try:
+                            # Handle ISO format. "2026-01-16T11:21:49.875"
+                            # We can just split T and take string parts if simple, or use datetime
+                            # Let's use string manipulation for speed and robustness against variations
+                            # Or strict parsing if preferred.
+                            # Standard ISO: YYYY-MM-DDTHH:MM:SS
+                            
+                            if "T" in iso_str:
+                                p1, p2 = iso_str.split("T")
+                                y, m, d = p1.split("-")
+                                # p2 is HH:MM:SS.ms
+                                time_part = p2.split(".")[0]
+                                h, mi = time_part.split(":")[:2]
+                                return f"{d}/{m}/{y} {h}:{mi}"
+                            return iso_str
+                        except:
+                            return iso_str
+
+                    row = {
+                        "Mã TBMT": item.get("notifyNo", ""),
+                        "Chủ đầu tư": item.get("investorName", ""),
+                        "Địa điểm": loc_str,
+                        "Thời điểm đóng thầu": format_date_str(item.get("bidCloseDate", "")),
+                        "Trạng thái": trang_thai
+                    }
+                    batch_data.append(row)
+                except Exception as e:
+                    print(f"Error parse item: {e}")
+            
+            # Save Batch
+            if batch_data:
+                all_data.extend(batch_data)
+                try:
+                    pd.DataFrame(all_data).to_excel(output_path, index=False)
+                    print(f"  Saved {len(batch_data)} API items to {output_path}")
+                except Exception as e:
+                    print(f"  Save error: {e}")
+
+            total_fetched += len(items)
+            
+            # Check Max Pages
+            if page_num >= max_pages:
+                print(f"Reached max pages limit ({max_pages}).")
+                break
+                
+            # Next Page
+            page_num += 1
+            time.sleep(1) # Gentle rate limit
+            
+        print(f"Scraping completed. Total items: {total_fetched}")
         browser.close()
 
 if __name__ == "__main__":
