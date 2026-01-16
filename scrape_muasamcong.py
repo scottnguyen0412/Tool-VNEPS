@@ -776,6 +776,30 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
             print("Waiting for results...")
             time.sleep(3) # Initial wait
             
+            # F. Select 50 items per page
+            # Look for the select element which is standard for this table
+            try:
+                # The select is usually at the bottom or top of the list
+                # Based on inspection: it is a <select> element.
+                # We can try to finding it by structure or just 'select' if unique in that context
+                # "20 / trang", "50 / trang" usually
+                
+                # Wait for select to appear
+                page.wait_for_selector('select', timeout=10000)
+                
+                # Check current value
+                # Select option "50"
+                print("Selecting 50 items/page...")
+                select_el = page.locator('select').first
+                select_el.select_option("50")
+                
+                # Wait for reload
+                time.sleep(3)
+                print("Page size updated to 50.")
+                
+            except Exception as e:
+                print(f"Warning: Could not select 50 items/page: {e}")
+
             item_selector = ".content__body__list__item"
             try:
                 page.wait_for_selector(item_selector, timeout=30000)
