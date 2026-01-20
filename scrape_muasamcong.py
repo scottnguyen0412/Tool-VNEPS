@@ -2,6 +2,8 @@ import json
 import time
 import random
 import pandas as pd
+import urllib.parse
+
 from playwright.sync_api import sync_playwright
 
 import os
@@ -567,6 +569,127 @@ def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="",
         browser.close()
         print("Scraping completed.")
 
+def fetch_bid_detail(api_context, token, bid_id):
+    url = f"https://muasamcong.mpi.gov.vn/o/egp-portal-contractor-selection-v2/services/lcnt_tbmt_ttc_ldt?token={token}"
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+        "Origin": "https://muasamcong.mpi.gov.vn",
+        "Referer": "https://muasamcong.mpi.gov.vn/",
+    }
+    payload = {"id": bid_id}
+    
+    try:
+        response = api_context.post(url, data=payload, headers=headers)
+        if response.ok:
+            return response.json()
+        else:
+            # print(f"Detail API Error {response.status}: {response.status_text}")
+            return None
+    except Exception as e:
+        # print(f"Detail Fetch Error: {e}")
+        return None
+    return None
+
+def process_detail_data(detail_json):
+    if not detail_json: return None
+    
+    # Root object helper
+    m = detail_json.get("bidoNotifyContractorM", {}) or {}
+    plan = detail_json.get("bidpPlanDetail", {}) or {}
+    contractor = detail_json.get("bidInvContractorOfflineDTO", {}) or {}
+    status_obj = detail_json.get("bidoBidStatus", {}) or {}
+    
+    # Helpers
+    def get_date(iso):
+        if not iso: return ""
+        try:
+            return iso.split("T")[0]
+        except: return iso
+        
+    def get_datetime(iso):
+         if not iso: return ""
+         try:
+            return iso.replace("T", " ").split(".")[0]
+         except: return iso
+
+    def map_val(val, mapping):
+        s = str(val) if val is not None else ""
+        return mapping.get(s, s)
+        
+    def format_currency(val):
+        if val is None or val == "": return ""
+        try:
+            # Format: 9.422.000 VNĐ
+            s = "{:,.0f}".format(float(val))
+            return s.replace(",", ".") + " VNĐ"
+        except: return str(val)
+
+    unit_map = {"D": "Ngày", "M": "Tháng", "Y": "Năm", "W": "Tuần", "Q": "Quý"}
+    def format_period(val, unit):
+        v = str(val) if val is not None else ""
+        u = unit_map.get(unit, unit) if unit else ""
+        return f"{v} {u}".strip()
+
+    # Location
+    locs = detail_json.get("bidpBidLocationList", [])
+    loc_str = ""
+    if locs:
+        l_parts = []
+        for l in locs:
+            d = l.get("districtName", "")
+            p = l.get("provName", "")
+            l_parts.append(f"{p}, {d}")
+        loc_str = "; ".join(l_parts)
+    
+    # Lot Count
+    lot_list = []
+    if m.get("lotDTOList"): lot_list = m.get("lotDTOList")
+    if not lot_list:
+        resp = detail_json.get("bidNoContractorResponse", {}) or {}
+        notif = resp.get("bidNotification", {}) or {}
+        if notif.get("lotDTOList"): lot_list = notif.get("lotDTOList")
+    if not lot_list and "lotDTOList" in detail_json:
+        lot_list = detail_json["lotDTOList"]
+
+    # isMultiLot Logic (Fallback to status or plan if missing in m)
+    is_multi = m.get("isMultiLot")
+    if is_multi is None: is_multi = status_obj.get("isMultiLot")
+    if is_multi is None: is_multi = plan.get("isMultiLot")
+    multi_lot_str = "Có" if str(is_multi) == "1" else "Không"
+
+    # Mapping
+    return {
+        "Mã TBMT": m.get("notifyNo"),
+        "Ngày đăng tải": get_datetime(m.get("publicDate")),
+        "Mã KHLCNT": m.get("planNo"),
+        "Phân loại KHLCNT": map_val(m.get("planType"), {"TX": "Chi thường xuyên", "DT": "Đầu tư phát triển"}),
+        "Tên dự toán mua sắm": m.get("planName") or m.get("projectName"),
+        "Quy trình áp dụng": map_val(m.get("processApply"), {"LDT": "Luật Đấu thầu", "LDT2023": "Luật đấu thầu 2023"}),
+        "Tên gói thầu": m.get("bidName"),
+        "Chủ đầu tư": m.get("investorName"),
+        "Chi tiết nguồn vốn": m.get("capitalDetail"),
+        "Lĩnh vực": map_val(m.get("investField"), {"HH": "Hàng hóa", "XL": "Xây lắp", "PTV": "Phi tư vấn", "TV": "Tư vấn"}),
+        "Hình thức lựa chọn nhà đầu": map_val(m.get("bidForm"), {"DTRR": "Đấu thầu rộng rãi", "CHCT": "Chào hàng cạnh tranh"}),
+        "Loại hợp đồng": map_val(m.get("contractType"), {"DGCD": "Đơn giá cố định", "TRGO": "Trọn gói"}),
+        "Trong nước/ Quốc tế": "Trong nước" if str(m.get("isDomestic")) == "1" else "Quốc tế",
+        "Thời gian thực hiện gói thầu": format_period(m.get('contractPeriod'), m.get('contractPeriodUnit')),
+        "Gói thầu có nhiều phần/ lô": multi_lot_str,
+        "Số lượng phần (lô)": len(lot_list) if lot_list else 0,
+        "Hình thức dự thầu": "Qua mạng" if str(m.get("isInternet")) == "1" else "Không qua mạng",
+        "Địa điểm phát hành e-HSMT": m.get("issueLocation"),
+        "Địa điểm nhận e-HSDT": m.get("receiveLocation"),
+        "Địa điểm thực hiện gói thầu": loc_str,
+        "Thời điểm đóng thầu": get_datetime(m.get("bidCloseDate")),
+        "Thời điểm mở thầu": get_datetime(m.get("bidOpenDate")),
+        "Hiệu lực hồ sơ dự thầu": format_period(m.get('bidValidityPeriod'), m.get('bidValidityPeriodUnit')),
+        "Số tiền bảo đảm dự thầu": format_currency(m.get("guaranteeValue")),
+        "Hình thức đảm bảo dự thầu": m.get("guaranteeForm"),
+        "Số quyêt định phê duyệt": contractor.get("decisionNo"),
+        "Ngày phê duyệt": get_date(contractor.get("decisionDate")),
+        "Cơ quan ban hành quyết định": contractor.get("decisionAgency")
+    }
+
 def run_contractor_selection(output_path=None, max_pages=None, keywords="", exclude_words="", from_date="", to_date="", pause_event=None, stop_event=None):
     """
     Function to scrape Contractor Selection Results (Kết quả lựa chọn nhà thầu).
@@ -966,7 +1089,8 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
                         "Chủ đầu tư": item.get("investorName", ""),
                         "Địa điểm": loc_str,
                         "Thời điểm đóng thầu": format_date_str(item.get("bidCloseDate", "")),
-                        "Trạng thái": trang_thai
+                        "Trạng thái": trang_thai,
+                        "id": item.get("id", "") # Added for Detail Scraping
                     }
                     batch_data.append(row)
                 except Exception as e:
@@ -993,6 +1117,64 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
             time.sleep(1) # Gentle rate limit
             
         print(f"Scraping completed. Total items: {total_fetched}")
+        
+        # --- PHASE 2: Fetch Details ---
+        token = None
+        if api_url:
+             try:
+                 parsed = urllib.parse.urlparse(api_url)
+                 token = urllib.parse.parse_qs(parsed.query).get('token', [None])[0]
+             except: pass
+        
+        if token and all_data:
+            print(f"--- Starting Detail Scraping (Token: {token[:10]}...) ---")
+            detail_output_path = output_path.replace(".xlsx", " detail.xlsx")
+            
+            detail_all = []
+            
+            # Use same context or create new logic
+            # Use api_context which is already set
+            
+            total_d = len(all_data)
+            print(f"Total items to detail: {total_d}")
+            
+            for idx, row in enumerate(all_data):
+                bid_id = row.get("id")
+                if not bid_id: continue
+                
+                check_status()
+                print(f"  Fetching detail {idx+1}/{total_d}: {row.get('Mã TBMT', bid_id)}")
+                
+                # Fetch
+                d_json = fetch_bid_detail(api_context, token, bid_id)
+                if d_json:
+                    # Parse
+                    d_row = process_detail_data(d_json)
+                    if d_row:
+                        detail_all.append(d_row)
+                        
+                # Auto-Save every 10 items
+                if (idx + 1) % 10 == 0:
+                    try:
+                        pd.DataFrame(detail_all).to_excel(detail_output_path, index=False)
+                        print(f"  [Auto-Save] Saved {len(detail_all)} details so far.")
+                    except Exception as e:
+                        print(f"  [Auto-Save Error] {e}")
+
+                time.sleep(0.5) # Gentle
+            
+            # Final Save
+            if detail_all:
+                try:
+                    pd.DataFrame(detail_all).to_excel(detail_output_path, index=False)
+                    print(f"Successfully saved details to: {detail_output_path}")
+                except Exception as e:
+                    print(f"Error saving details: {e}")
+            else:
+                print("No detailed data collected.")
+        else:
+            print("Skipping details: No token found or no data.")
+
         browser.close()
 
 if __name__ == "__main__":
