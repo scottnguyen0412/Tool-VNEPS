@@ -130,6 +130,7 @@ class ScraperApp(ctk.CTk):
         self.tab_all = self.tab_view.add("Cào Toàn Bộ") # Tab 1
         self.tab_filter = self.tab_view.add("Cào Theo Bộ Ngành") # Tab 2
         self.tab_contractor = self.tab_view.add("Kết Quả Đấu Thầu") # Tab 3
+        self.tab_drug = self.tab_view.add("Công bố giá thuốc") # Tab 4 (New)
         
         # --- Tab 3 Content (Contractor Results) ---
         self.contractor_frame = ctk.CTkFrame(self.tab_contractor, fg_color="transparent")
@@ -163,6 +164,19 @@ class ScraperApp(ctk.CTk):
 
         ctk.CTkLabel(self.contractor_frame, text="* Tự động chọn Field: Hàng hóa, Search By: Thuốc/Dược liệu", 
                      text_color="gray", font=ctk.CTkFont(size=11)).pack(anchor="w")
+        
+        # Tab 4 Content (Drug Price)
+        self.drug_frame = ctk.CTkFrame(self.tab_drug, fg_color="transparent")
+        self.drug_frame.pack(fill="both", padx=10, pady=5)
+        
+        ctk.CTkLabel(self.drug_frame, text="Hệ thống sẽ cào dữ liệu từ dichvucong.dav.gov.vn", 
+                     font=ctk.CTkFont(size=13, weight="bold")).pack(pady=(10, 5))
+        
+        ctk.CTkLabel(self.drug_frame, text="Dữ liệu bao gồm: Tên thuốc, Hoạt chất, Giá kê khai, Cơ sở SX...", 
+                     text_color="gray").pack(pady=5)
+                     
+        ctk.CTkLabel(self.drug_frame, text="* Lưu ý: Quá trình sẽ chạy tuần tự từ trang đầu đến hết.", 
+                     font=ctk.CTkFont(size=11, slant="italic"), text_color="#E67E22").pack(pady=10)
         
         # Tab 1 Content
         ctk.CTkLabel(self.tab_all, text="Chế độ này sẽ cào tất cả dữ liệu (Không lọc theo Bộ).", text_color="gray").pack(pady=20)
@@ -375,6 +389,8 @@ class ScraperApp(ctk.CTk):
             # Handle placeholder text if user didn't change it (optional, but good UX)
             if "..." in kw: kw = "" # Let backend handle default
             if "..." in exclude: exclude = "" 
+        elif current_tab == "Công bố giá thuốc":
+            mode = "DRUG_PRICE" 
 
         # Threading
         t = threading.Thread(target=self.run_process, args=(output_path, max_pages, start_ministry, is_sequential, mode, kw, exclude, from_date, to_date))
@@ -396,6 +412,17 @@ class ScraperApp(ctk.CTk):
                     exclude_words=exclude,
                     from_date=from_date,
                     to_date=to_date,
+                    pause_event=self.pause_event,
+                    stop_event=self.stop_event
+                )
+                print("\n>>> COMPLETED SUCCESSFULLY!")
+                self.timer_running = False
+                self.status_label.configure(text="Status: Completed ✅")
+                messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
+                return
+            elif mode == "DRUG_PRICE":
+                scrape_muasamcong.run_drug_price_scrape(
+                    output_path=output_path,
                     pause_event=self.pause_event,
                     stop_event=self.stop_event
                 )

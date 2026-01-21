@@ -1323,5 +1323,154 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
 
         browser.close()
 
-if __name__ == "__main__":
-    run()
+
+def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
+    import requests
+    import pandas as pd
+    import time
+    from datetime import datetime
+
+    if output_path is None:
+        output_path = "CongBoGiaThuoc.xlsx"
+    if not output_path.endswith(".xlsx"):
+        output_path += ".xlsx"
+
+    print(f"--- Bắt đầu cào Công bố giá thuốc ---")
+    print(f"File lưu: {output_path}")
+
+    url = "https://dichvucong.dav.gov.vn/api/services/app/quanLyGiaThuoc/GetListCongBoPublicPaging"
+    
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
+    # Default payload structure
+    payload = {
+        "CongBoGiaThuoc": {},
+        "KichHoat": True,
+        "skipCount": 0,
+        "maxResultCount": 100,
+        "sorting": None
+    }
+
+    all_data = []
+    skip_count = 0
+    max_result_count = 100
+    total_count = None
+    processed_count = 0
+
+    # formatting helper
+    def format_money(val):
+        if val is None or val == "":
+            return ""
+        try:
+             # 999900.0 -> 999,900
+            return "{:,.0f}".format(float(val))
+        except:
+            return str(val)
+
+    def format_date(iso_str):
+        if not iso_str: return ""
+        try:
+            # Example: 2026-01-14T14:18:08.64+07:00
+            # We only want day/month/year
+            dt = datetime.fromisoformat(iso_str)
+            return dt.strftime("%d/%m/%Y")
+        except:
+            # Fallback for manual parsing if isoformat fails on some versions
+            try:
+                return iso_str.split("T")[0]
+            except:
+                return iso_str
+
+    while True:
+        # Check Thread Events
+        if stop_event and stop_event.is_set():
+            print(">>> STOPPED by user.")
+            break
+        if pause_event:
+            while not pause_event.is_set():
+                time.sleep(1)
+                if stop_event and stop_event.is_set():
+                    break
+        
+        # Update payload
+        payload["skipCount"] = skip_count
+        
+        print(f"Fetching skipCount={skip_count}...")
+        
+        try:
+            resp = requests.post(url, json=payload, headers=headers, timeout=30)
+            if resp.status_code != 200:
+                print(f"Error: API returned status {resp.status_code}")
+                time.sleep(5)
+                continue
+            
+            data = resp.json()
+            result = data.get("result", {})
+            items = result.get("items", [])
+            
+            if total_count is None:
+                total_count = result.get("totalCount", 0)
+                print(f"Total items found: {total_count}")
+            
+            if not items:
+                print("No more items.")
+                break
+                
+            # Process items
+            for item in items:
+                # Mapping
+                row = {
+                    "Ngày Công bố": format_date(item.get("ngayKK_KKL")),
+                    "Tên thuốc": item.get("tenThuoc"),
+                    "Tên HC": item.get("hoatChat"),
+                    "NĐ/HL": item.get("hamLuong"),
+                    "Số GPLH/GPNK": item.get("soDangKy"),
+                    "Dạng bào chế": item.get("dangBaoChe"),
+                    "Quy Cách Đóng gói": item.get("quyCachDongGoi"),
+                    "ĐVT": item.get("donViTinh"),
+                    "Giá Bán Buôn Dự Kiến (VNĐ) (VAT)": format_money(item.get("giaBanBuonDuKien")),
+                    "Cơ sở SX": item.get("doanhNghiepSanXuat"),
+                    "Nước Sản Xuất": item.get("nuocSanXuat"),
+                    "Đối tượng thực hiện công bố": item.get("donViKeKhai") 
+                }
+                all_data.append(row)
+            
+            processed_count += len(items)
+            print(f"  Fetched {len(items)} items. Total: {processed_count}/{total_count}")
+            
+            # Save every batch (or every few batches)
+            try:
+                pd.DataFrame(all_data).to_excel(output_path, index=False)
+            except Exception as e:
+                print(f"  Save error: {e}")
+
+            # Prepare next page
+            skip_count += max_result_count
+            
+            if skip_count >= total_count:
+                print("All items fetched.")
+                break
+                
+            time.sleep(1) # Polite delay
+
+        except Exception as e:
+            print(f"Request failed: {e}")
+            time.sleep(5)
+            # Maybe retry same skip_count? 
+            # simple retry loop not impl here, just continue will retry if loop not broken
+            # but usually skip_count is updated at end of loop. 
+            # Ideally should not increment skip_count on error.
+            # But let's keep it simple: if error, wait and retry SAME skip_count? 
+            # Current code increments skip_count only at bottom.
+            # So if exception, we continue loop, skip_count NOT incremented?
+            # No, 'continue' goes to start of loop. skip_count is defined outside.
+            # Yes, if exception, we loop again with SAME skip_count suitable for retry.
+            pass
+
+    print(f"Completed! Data saved to {output_path}")
+
+
+
