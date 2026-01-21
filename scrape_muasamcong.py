@@ -734,6 +734,24 @@ def fetch_bid_open(api_context, token, notify_no, notify_id):
          print(f"Error fetching bid-open: {e}")
     return None
 
+def fetch_contractor_input_result(api_context, token, bid_id):
+    url = f"https://muasamcong.mpi.gov.vn/o/egp-portal-contractor-selection-v2/services/expose/contractor-input-result/get?token={token}"
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+        "Origin": "https://muasamcong.mpi.gov.vn",
+        "Referer": "https://muasamcong.mpi.gov.vn/",
+    }
+    payload = {"id": bid_id}
+    try:
+        response = api_context.post(url, data=payload, headers=headers)
+        if response.ok:
+            return response.json()
+    except Exception as e:
+        print(f"Error fetching contractor-input-result: {e}")
+    return None
+
+
 def run_contractor_selection(output_path=None, max_pages=None, keywords="", exclude_words="", from_date="", to_date="", pause_event=None, stop_event=None):
     """
     Function to scrape Contractor Selection Results (Kết quả lựa chọn nhà thầu).
@@ -1134,7 +1152,8 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
                         "Địa điểm": loc_str,
                         "Thời điểm đóng thầu": format_date_str(item.get("bidCloseDate", "")),
                         "Trạng thái": trang_thai,
-                        "id": item.get("id", "") # Added for Detail Scraping
+                        "id": item.get("id", ""), # Added for Detail Scraping
+                        "inputResultId": item.get("inputResultId", "") # Added for Phase 4
                     }
                     batch_data.append(row)
                 except Exception as e:
@@ -1320,6 +1339,165 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
                      print(f"Error saving Phase 3 excel: {e}")
              else:
                  print("No data collected for Phase 3.")
+
+        # --- PHASE 4: Contractor Input Result (Danh Sach Nha Thau & Hang Hoa) ---
+        if token and all_data:
+             print(f"--- Starting Phase 4: Contractor & Goods Lists ---")
+             dir_name = os.path.dirname(output_path)
+             nha_thau_path = os.path.join(dir_name, "Danh Sach Nha Thau.xlsx")
+             hang_hoa_path = os.path.join(dir_name, "Danh Sach Hang Hoa.xlsx")
+             
+             list_nha_thau = []
+             list_hang_hoa = []
+             
+             total_p4 = len(all_data)
+             
+             for i, row in enumerate(all_data):
+
+                 # Phase 4 ID Logic
+                 phase4_id = row.get("inputResultId")
+                 if not phase4_id: 
+                     # print(f"  Phase 4: Skipping {row.get('Mã TBMT')} (No inputResultId)")
+                     continue
+                 
+                 check_status()
+                 print(f"  Phase 4: Processing {i+1}/{total_p4} | InputResultID: {phase4_id}...")
+             
+                 try:
+                     res = fetch_contractor_input_result(api_context, token, phase4_id)
+                     if not res: 
+                         print(f"    -> [Skipped] API returned None for {phase4_id}")
+                         continue
+                 
+                     root_dto = res.get("bideContractorInputResultDTO", {})
+                     if not root_dto: 
+                         print(f"    -> [Skipped] No bideContractorInputResultDTO for {bid_id}")
+                         continue
+                 
+                     notify_no = root_dto.get("notifyNo")
+                     lot_results = root_dto.get("lotResultDTO") or []
+                     lot_items = root_dto.get("lotResultItems") or []
+                     
+                     if not lot_results and not lot_items:
+                         print(f"    -> [Info] No lot results or items.")
+                     
+                     # 1. Process Danh Sach Nha Thau
+                     # Strategy: Iterate Lots -> ContractorList -> Link to LotItems
+                     for lot in lot_results:
+                         l_no = lot.get("lotNo")
+                         l_name = lot.get("lotName")
+                         c_list = lot.get("contractorList") or []
+                         
+                         for cntr in c_list:
+                             # Link: item_result["listLotResultId"] == cntr["id"]
+                             cntr_id = cntr.get("id")
+                             linked_item = None
+                             for it in lot_items:
+                                 if it.get("listLotResultId") == cntr_id:
+                                     linked_item = it
+                                     break
+                            
+                             don_gia = None
+                             qty = None
+                             
+                             if linked_item:
+                                 fv_str = linked_item.get("formValue")
+                                 if fv_str:
+                                     try:
+                                         fv_json = json.loads(fv_str)
+                                         if fv_json and isinstance(fv_json, list):
+                                              # Take first item for summary?
+                                              first = fv_json[0]
+                                              don_gia = first.get("donGia")
+                                              qty = first.get("quantity")
+                                     except: pass
+                             
+                             # Mapping
+                             result_status = "Không trúng thầu"
+                             if don_gia: # Rule: If has price -> Won? Or "Nếu có Giá dự thầu" - user request
+                                 result_status = "Trúng thầu"
+                             
+                             # Formatting
+                             def fmt(x):
+                                 if x is None or x == "": return ""
+                                 try: return "{:,.0f}".format(float(x)).replace(",", ".")
+                                 except: return str(x)
+
+                             row_nt = {
+                                 "Mã TBMT": notify_no,
+                                 "Mã phần (lô)": l_no,
+                                 "Tên hoạt chất/ Tên thành phần thuốc": l_name,
+                                 "Mã định danh": cntr.get("orgCode"),
+                                 "Mã số thuế": cntr.get("taxCode"),
+                                 "Tên nhà thầu": cntr.get("orgFullname"),
+                                 "Giá dự thầu": fmt(don_gia),
+                                 "Giá trúng thầu của từng phần đã bao gồm giảm giá (VND) (đã bao gồm các hạng mục của phần đó)": fmt(cntr.get("lotFinalPrice")),
+                                 "Số lượng trúng thầu": fmt(qty),
+                                 "Kết quả": result_status,
+                                 "Thời gian thực hiện gói thầu": cntr.get("cperiodText"),
+                                 "Thời gian thực hiện hợp đồng": cntr.get("bidExecutionTime")
+                             }
+                             list_nha_thau.append(row_nt)
+
+                     # 2. Process Danh Sach Hang Hoa
+                     # Strategy: Iterate LotItems -> formValue
+                     for it in lot_items:
+                         fv_str = it.get("formValue")
+                         if not fv_str: continue
+                         try:
+                             goods = json.loads(fv_str)
+                             if not goods or not isinstance(goods, list): continue
+                             
+                             for g in goods:
+                                 def fmt(x):
+                                     if x is None or x == "": return ""
+                                     try: return "{:,.0f}".format(float(x)).replace(",", ".")
+                                     except: return str(x)
+
+                                 row_hh = {
+                                     "Mã TBMT": notify_no,
+                                     "Mã Phần/lô": g.get("lotNo"),
+                                     "Mã thuốc": g.get("medicineCode"),
+                                     "Tên thuốc": g.get("name"),
+                                     "Tên hoạt chất/ Tên thành phần của thuốc": g.get("tenHoatChat"),
+                                     "Nồng độ, hàm lượng": g.get("nongDo"),
+                                     "Đường dùng": g.get("duongDung"),
+                                     "Dạng bào chế": g.get("dangBaoChe"),
+                                     "Quy cách": g.get("quyCach"),
+                                     "Nhóm thuốc": g.get("groupMedicine"),
+                                     "Hạn dùng (Tuổi thọ)": g.get("hanDung"),
+                                     "GĐKLH hoặc GPNK": g.get("gdklh"),
+                                     "Cơ sở sản xuất": g.get("csSanXuat"),
+                                     "Xuất xứ": g.get("nuocSanXuat"),
+                                     "Đơn vị tính": g.get("uom"),
+                                     "Số lượng": fmt(g.get("quantity")),
+                                     "Đơn giá trúng thầu (VND)": fmt(g.get("donGia")),
+                                     "Thành tiền": fmt(g.get("amount")),
+                                     "Nhà thầu trúng thầu": g.get("contractorName"),
+                                     "Tiến độ cung cấp": g.get("tienDo")
+                                 }
+                                 list_hang_hoa.append(row_hh)
+                         except: pass
+
+                     time.sleep(0.3)
+                 
+                 except Exception as e:
+                     print(f"  Error Phase 4 {bid_id}: {e}")
+             
+             # Save Files
+             if list_nha_thau:
+                 try:
+                     pd.DataFrame(list_nha_thau).to_excel(nha_thau_path, index=False)
+                     print(f"Successfully saved: {nha_thau_path}")
+                 except Exception as e:
+                     print(f"Error saving Nha Thau: {e}")
+             
+             if list_hang_hoa:
+                 try:
+                     pd.DataFrame(list_hang_hoa).to_excel(hang_hoa_path, index=False)
+                     print(f"Successfully saved: {hang_hoa_path}")
+                 except Exception as e:
+                     print(f"Error saving Hang Hoa: {e}")
 
         browser.close()
 
