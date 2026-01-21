@@ -690,6 +690,50 @@ def process_detail_data(detail_json):
         "Cơ quan ban hành quyết định": contractor.get("decisionAgency")
     }
 
+def fetch_lot_open_detail(api_context, token, notify_no, notify_id):
+    url = f"https://muasamcong.mpi.gov.vn/o/egp-portal-contractor-selection-v2/services/expose/ldtkqmt/bid-notification-p/lotOpenDetail?token={token}"
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+        "Origin": "https://muasamcong.mpi.gov.vn",
+        "Referer": "https://muasamcong.mpi.gov.vn/",
+    }
+    payload = {
+        "notifyNo": notify_no,
+        "notifyId": notify_id,
+        "type": "TBMT",
+        "packType": 0
+    }
+    try:
+        response = api_context.post(url, data=payload, headers=headers)
+        if response.ok:
+            return response.json()
+    except Exception as e:
+        print(f"Error fetching lotOpenDetail: {e}")
+    return None
+
+def fetch_bid_open(api_context, token, notify_no, notify_id):
+    url = f"https://muasamcong.mpi.gov.vn/o/egp-portal-contractor-selection-v2/services/expose/ldtkqmt/bid-notification-p/bid-open?token={token}"
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+        "Origin": "https://muasamcong.mpi.gov.vn",
+        "Referer": "https://muasamcong.mpi.gov.vn/",
+    }
+    payload = {
+        "notifyNo": notify_no,
+        "notifyId": notify_id,
+        "type": "TBMT",
+        "packType": 0
+    }
+    try:
+         response = api_context.post(url, data=payload, headers=headers)
+         if response.ok:
+             return response.json()
+    except Exception as e:
+         print(f"Error fetching bid-open: {e}")
+    return None
+
 def run_contractor_selection(output_path=None, max_pages=None, keywords="", exclude_words="", from_date="", to_date="", pause_event=None, stop_event=None):
     """
     Function to scrape Contractor Selection Results (Kết quả lựa chọn nhà thầu).
@@ -1126,6 +1170,7 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
                  token = urllib.parse.parse_qs(parsed.query).get('token', [None])[0]
              except: pass
         
+        phase3_inputs = []
         if token and all_data:
             print(f"--- Starting Detail Scraping (Token: {token[:10]}...) ---")
             detail_output_path = output_path.replace(".xlsx", " detail.xlsx")
@@ -1152,6 +1197,14 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
                     d_row = process_detail_data(d_json)
                     if d_row:
                         detail_all.append(d_row)
+                    
+                    # Phase 3 Collection
+                    try:
+                        plan = d_json.get("bidpPlanDetail", {}) or {}
+                        link_info_str = plan.get("linkNotifyInfo")
+                        if link_info_str:
+                             phase3_inputs.append(link_info_str)
+                    except: pass
                         
                 # Auto-Save every 10 items
                 if (idx + 1) % 10 == 0:
@@ -1174,6 +1227,99 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
                 print("No detailed data collected.")
         else:
             print("Skipping details: No token found or no data.")
+
+        # --- PHASE 3: Bid Opening Details ---
+        # --- PHASE 3: Bid Opening Details ---
+        if token and phase3_inputs:
+             print(f"--- Starting Phase 3: Bid Opening Details (Count: {len(phase3_inputs)}) ---")
+             
+             # Save to same directory as output_path
+             dir_name = os.path.dirname(output_path)
+             phase3_output_path = os.path.join(dir_name, "Bien ban mo thau detail.xlsx")
+
+             
+             phase3_data = []
+             
+             for i, info_str in enumerate(phase3_inputs):
+                 check_status()
+                 try:
+                     # Parse info
+                     info_obj = json.loads(info_str)
+                     notify_no = info_obj.get("notifyNo")
+                     notify_id = info_obj.get("notifyId")
+                     
+                     if not notify_no or not notify_id: continue
+                     
+                     print(f"  Phase 3 Processing {i+1}/{len(phase3_inputs)}: {notify_no}")
+                     
+                     # Call APIs
+                     # API 1
+                     lot_details = fetch_lot_open_detail(api_context, token, notify_no, notify_id)
+                     
+                     # API 2
+                     bid_opens = fetch_bid_open(api_context, token, notify_no, notify_id)
+                     
+                     if not lot_details: 
+                         # Try API 2 alone? Join requires API 1 usually.
+                         continue
+
+                     # Process & Join
+                     # API 1 list
+                     lot_list = lot_details if isinstance(lot_details, list) else []
+                     
+                     # API 2 Map
+                     bid_map = {} # Map bid_id (id in API 2) -> object
+                     if bid_opens and "bidSubmissionByContractorViewResponse" in bid_opens:
+                         sub_list = bid_opens["bidSubmissionByContractorViewResponse"].get("bidSubmissionDTOList", [])
+                         if sub_list:
+                             for sub in sub_list:
+                                 if "id" in sub:
+                                     bid_map[sub["id"]] = sub
+                     
+                     # Join
+                     # Helper for formatting: 13545000 -> 13.545.000
+                     def fmt_val(v):
+                        if v is None or v == "": return ""
+                        try:
+                            return "{:,.0f}".format(float(v)).replace(",", ".")
+                        except:
+                            return str(v)
+
+                     for lot in lot_list:
+                          # Create Row
+                          bid_open_id = lot.get("bidOpenId")
+                          linked_bid = bid_map.get(bid_open_id, {})
+                          
+                          row = {
+                              "Mã TBMT": notify_no,
+                              "Mã phân/ lô": lot.get("lotNo"),
+                              "Tên thành phần thuốc": lot.get("lotName"),
+                              "Mã định danh": lot.get("contractorCode"),
+                              "Tên nhà thầu": lot.get("contractorName"),
+                              "Tỷ lệ phần trăm giảm giá (nếu có)": lot.get("discountPercent"),
+                              "Giá dự thầu": fmt_val(lot.get("lotFinalPrice")),
+                              
+                              # Joined fields
+                              "Hiệu lực HSDT": linked_bid.get("bidValidityNum"),
+                              "Bảo đảm dự thầu cho các phần tham dự (VND)": fmt_val(linked_bid.get("bidGuarantee")),
+                              "Hiệu lực của BĐDT": linked_bid.get("bidGuaranteeValidity")
+                          }
+                          phase3_data.append(row)
+                     
+                     time.sleep(0.5)
+
+                 except Exception as e:
+                     print(f"  Error Phase 3 item: {e}")
+             
+             # Save
+             if phase3_data:
+                 try:
+                     pd.DataFrame(phase3_data).to_excel(phase3_output_path, index=False)
+                     print(f"Successfully saved Phase 3 data to: {phase3_output_path}")
+                 except Exception as e:
+                     print(f"Error saving Phase 3 excel: {e}")
+             else:
+                 print("No data collected for Phase 3.")
 
         browser.close()
 
