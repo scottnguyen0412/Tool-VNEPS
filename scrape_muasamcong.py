@@ -1192,7 +1192,7 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
         phase3_inputs = []
         if token and all_data:
             print(f"--- Starting Detail Scraping (Token: {token[:10]}...) ---")
-            detail_output_path = output_path.replace(".xlsx", " detail.xlsx")
+            detail_output_path = output_path.replace(".xlsx", " Detail.xlsx")
             
             detail_all = []
             

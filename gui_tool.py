@@ -25,7 +25,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.7.5"
+CURRENT_VERSION = "v1.9.0"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -35,7 +35,7 @@ class ScraperApp(ctk.CTk):
 
         # Window Configuration
         self.title(f"Tool Muasamcong Scrape Data ({CURRENT_VERSION})")
-        self.geometry("900x700")
+        self.geometry("1200x800")
         
         # Set Icon
         try:
@@ -121,14 +121,14 @@ class ScraperApp(ctk.CTk):
         self.browse_btn.grid(row=0, column=2, padx=20, pady=20)
 
         # --- TABS for Filter ---
-        self.tab_view = ctk.CTkTabview(self.settings_card, height=160)
+        self.tab_view = ctk.CTkTabview(self.settings_card, height=160, command=self.on_tab_change)
         self.tab_view.grid(row=1, column=0, columnspan=3, padx=20, pady=(0, 10), sticky="ew")
         
         # Increase size of Tab Buttons
         self.tab_view._segmented_button.configure(font=ctk.CTkFont(size=15, weight="bold"), height=40)
         
-        self.tab_all = self.tab_view.add("Cào Toàn Bộ") # Tab 1
-        self.tab_filter = self.tab_view.add("Cào Theo Bộ Ngành") # Tab 2
+        self.tab_all = self.tab_view.add("Toàn Bộ") # Tab 1
+        self.tab_filter = self.tab_view.add("Theo Bộ Ngành") # Tab 2
         self.tab_contractor = self.tab_view.add("Kết Quả Đấu Thầu") # Tab 3
         self.tab_drug = self.tab_view.add("Công bố giá thuốc") # Tab 4 (New)
         
@@ -140,10 +140,10 @@ class ScraperApp(ctk.CTk):
         ctk.CTkLabel(self.contractor_frame, text="Từ khóa (mặc định):").pack(anchor="w")
         self.entry_keywords = ctk.CTkEntry(self.contractor_frame, height=30)
         self.entry_keywords.pack(fill="x", pady=(0, 5))
-        self.entry_keywords.insert(0, "thuốc, generic, tân dược, biệt dược, bệnh viện, chữa bệnh, vật tư y tế...")
+        self.entry_keywords.insert(0, "thuốc, generic, tân dược, biệt dược, bệnh viện, chữa bệnh, vật tư y tế, điều trị, bệnh nhân, thiết bị y tế, khám chữa bệnh, khám bệnh, chữa bệnh, dược liệu, dược")
         
         # Exclude
-        ctk.CTkLabel(self.contractor_frame, text="Từ loại trừ:").pack(anchor="w")
+        ctk.CTkLabel(self.contractor_frame, text="Loại trừ:").pack(anchor="w")
         self.entry_exclude = ctk.CTkEntry(self.contractor_frame, height=30)
         self.entry_exclude.pack(fill="x", pady=(0, 5))
         self.entry_exclude.insert(0, "linh kiện, xây dựng, cải tạo, lắp đặt, thi công")
@@ -193,7 +193,7 @@ class ScraperApp(ctk.CTk):
         self.combo_ministry.pack(side="left", padx=10)
         self.combo_ministry.set("Bộ Y tế")
         
-        self.chk_sequential = ctk.CTkCheckBox(self.ministry_frame, text="Cào tuần tự các bộ tiếp theo")
+        self.chk_sequential = ctk.CTkCheckBox(self.ministry_frame, text="Tuần tự các bộ tiếp theo")
         self.chk_sequential.pack(side="left", padx=20)
         self.chk_sequential.select() # Default selected
 
@@ -274,7 +274,7 @@ class ScraperApp(ctk.CTk):
         self.timer_label = ctk.CTkLabel(self.status_frame, text="00:00", font=ctk.CTkFont(family="Consolas", size=12))
         self.timer_label.pack(side="right", padx=10)
 
-        self.footer_branding = ctk.CTkLabel(self.footer_frame, text="Made with ❤️ by IT Boston", 
+        self.footer_branding = ctk.CTkLabel(self.footer_frame, text="Made with ❤️ by Boston Pharma", 
                                           font=ctk.CTkFont(size=12, slant="italic"), text_color="gray")
         self.footer_branding.pack(side="right")
 
@@ -285,16 +285,52 @@ class ScraperApp(ctk.CTk):
         # Startup Tasks
         self.after(2000, self.check_for_updates_thread)
 
+    def on_tab_change(self):
+        current = self.tab_view.get()
+        if current == "Kết Quả Đấu Thầu":
+            self.lbl_path.configure(text="Folder Save Path:")
+            # Remove filename if present (User request: No initialFile)
+            curr_val = self.path_entry.get()
+            if curr_val.lower().endswith(".xlsx"):
+                new_val = os.path.dirname(curr_val)
+                if not new_val: new_val = os.getcwd()
+                self.path_entry.delete(0, tk.END)
+                self.path_entry.insert(0, new_val)
+        else:
+            self.lbl_path.configure(text="File Save Path:")
+            # Restore filename if missing
+            curr_val = self.path_entry.get()
+            if not curr_val.lower().endswith(".xlsx"):
+                # Append default filename
+                if not curr_val or not os.path.exists(curr_val):
+                    curr_val = os.getcwd()
+                
+                # Check if it's a directory
+                if os.path.isdir(curr_val):
+                     new_val = os.path.join(curr_val, "investors_data_detailed.xlsx")
+                     self.path_entry.delete(0, tk.END)
+                     self.path_entry.insert(0, new_val)
+
     def browse_file(self):
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".xlsx",
-            filetypes=[("Excel Files", "*.xlsx"), ("All Files", "*.*")],
-            initialfile="investors_data_detailed.xlsx",
-            title="Save Output As"
-        )
-        if filename:
-            self.path_entry.delete(0, tk.END)
-            self.path_entry.insert(0, filename)
+        current_tab = self.tab_view.get()
+        
+        if current_tab == "Kết Quả Đấu Thầu":
+            # For Contractor mode, we select a FOLDER
+            folder_selected = filedialog.askdirectory(title="Select Folder to Save Data")
+            if folder_selected:
+                self.path_entry.delete(0, tk.END)
+                self.path_entry.insert(0, folder_selected)
+        else:
+            # Normal mode: File Save Dialog
+            filename = filedialog.asksaveasfilename(
+                defaultextension=".xlsx",
+                filetypes=[("Excel Files", "*.xlsx"), ("All Files", "*.*")],
+                initialfile="investors_data_detailed.xlsx",
+                title="Save Output As"
+            )
+            if filename:
+                self.path_entry.delete(0, tk.END)
+                self.path_entry.insert(0, filename)
 
     def write(self, text):
         self.after(0, self._safe_write, text)
@@ -330,8 +366,54 @@ class ScraperApp(ctk.CTk):
         limit_str = self.limit_entry.get().strip()
 
         if not output_path:
-            messagebox.showerror("Error", "Please specify a save file path!")
+            messagebox.showerror("Error", "Please specify a save path!")
             return
+
+        # Handle Folder Logic for Contractor Tab
+        current_tab = self.tab_view.get()
+        if current_tab == "Kết Quả Đấu Thầu":
+             # User selected a folder (hopefully)
+             # Even if they pointed to a file, let's try to assume directory or treat as is? 
+             # The new 'browse' forces directory.
+             
+             # Check if path exists or create it
+             # Wait, if user pasted a path.
+             pass
+             
+             # Create Subfolder: Ket Qua Dau Thau dd_mm_yyyy HH_MM_SS
+             # If output_path is a directory:
+             if os.path.isdir(output_path):
+                 import datetime
+                 now_str = datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")
+                 folder_name = f"Ket Qua Dau Thau {now_str}"
+                 full_folder_path = os.path.join(output_path, folder_name)
+                 
+                 try:
+                     os.makedirs(full_folder_path, exist_ok=True)
+                     # Set the output path to the Phase 1 file INSIDE this folder
+                     output_path = os.path.join(full_folder_path, "Danh Sach Thong Bao Moi Thau.xlsx")
+                 except Exception as e:
+                     messagebox.showerror("Error", f"Could not create folder: {e}")
+                     return
+             else:
+                 # If user entered a file path manually (unlikely if they stuck to browse), 
+                 # we could try to use the parent directory?
+                 # Or just respect the file path if they really want to.
+                 # But request says "folder save path".
+                 # Let's assume if it ends in .xlsx, use parent dir.
+                 if output_path.endswith(".xlsx"):
+                      # Use parent dir?
+                      parent = os.path.dirname(output_path)
+                      if os.path.isdir(parent):
+                           import datetime
+                           now_str = datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")
+                           folder_name = f"Ket Qua Dau Thau {now_str}"
+                           full_folder_path = os.path.join(parent, folder_name)
+                           try:
+                               os.makedirs(full_folder_path, exist_ok=True)
+                               output_path = os.path.join(full_folder_path, "Danh Sach Thong Bao Moi Thau.xlsx")
+                           except: pass
+
 
         try:
             max_pages = int(limit_str)
