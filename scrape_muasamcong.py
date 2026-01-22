@@ -1601,7 +1601,7 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
             for item in items:
                 # Mapping
                 row = {
-                    "Ngày Công bố": format_date(item.get("ngayKK_KKL")),
+                    "Ngày Công bố": format_date(item.get("ngayTiepNhan")),
                     "Tên thuốc": item.get("tenThuoc"),
                     "Tên HC": item.get("hoatChat"),
                     "NĐ/HL": item.get("hamLuong"),
