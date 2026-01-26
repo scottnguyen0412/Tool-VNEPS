@@ -1,15 +1,13 @@
 import json
 import time
+from datetime import datetime
 import random
 import pandas as pd
 import urllib.parse
-
 from playwright.sync_api import sync_playwright
-
 import os
+import requests
 
-# Fix for PyInstaller: Tell Playwright to look for browsers in the system default location
-# instead of looking inside the temporary _MEI folder.
 os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
 
 def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="", pause_event=None, stop_event=None):
@@ -191,10 +189,6 @@ def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="",
         # Wait for items
         item_selector = "h2.content__body__item__title"
         
-        # Wait for items to appear
-        item_selector = "h2.content__body__item__title"
-        # Since we want to check ID, we should also look for the container or the title. 
-        # The title selector is what we click on later.
         
         try:
             page.wait_for_selector(item_selector, timeout=30000)
@@ -762,7 +756,6 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
     - Field: "Hàng hóa"
     - Date Range: "Thời gian đăng tải"
     """
-    import os
     
     # 1. Setup Defaults
     if output_path is None:
@@ -1503,11 +1496,6 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
 
 
 def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
-    import requests
-    import pandas as pd
-    import time
-    from datetime import datetime
-
     if output_path is None:
         output_path = "CongBoGiaThuoc.xlsx"
     if not output_path.endswith(".xlsx"):
@@ -1552,11 +1540,10 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
         if not iso_str: return ""
         try:
             # Example: 2026-01-14T14:18:08.64+07:00
-            # We only want day/month/year
+            # format day/month/year
             dt = datetime.fromisoformat(iso_str)
             return dt.strftime("%d/%m/%Y")
         except:
-            # Fallback for manual parsing if isoformat fails on some versions
             try:
                 return iso_str.split("T")[0]
             except:
@@ -1637,15 +1624,7 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
         except Exception as e:
             print(f"Request failed: {e}")
             time.sleep(5)
-            # Maybe retry same skip_count? 
-            # simple retry loop not impl here, just continue will retry if loop not broken
-            # but usually skip_count is updated at end of loop. 
-            # Ideally should not increment skip_count on error.
-            # But let's keep it simple: if error, wait and retry SAME skip_count? 
-            # Current code increments skip_count only at bottom.
-            # So if exception, we continue loop, skip_count NOT incremented?
-            # No, 'continue' goes to start of loop. skip_count is defined outside.
-            # Yes, if exception, we loop again with SAME skip_count suitable for retry.
+            #retry if fail
             pass
 
     print(f"Completed! Data saved to {output_path}")

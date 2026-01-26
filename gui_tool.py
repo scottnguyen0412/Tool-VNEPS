@@ -25,7 +25,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.9.0"
+CURRENT_VERSION = "v1.9.1"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -458,7 +458,7 @@ class ScraperApp(ctk.CTk):
         from_date = ""
         to_date = ""
         
-        if current_tab == "Cào Theo Bộ Ngành":
+        if current_tab == "Theo Bộ Ngành":
             start_ministry = self.combo_ministry.get()
             is_sequential = True if self.chk_sequential.get() == 1 else False
         elif current_tab == "Kết Quả Đấu Thầu":
@@ -607,7 +607,6 @@ class ScraperApp(ctk.CTk):
         self.path_entry.configure(state="normal")
         self.limit_entry.configure(state="normal")
         self.tab_view.configure(state="normal") # Enable tabs
-        self.tab_view.configure(state="normal") # Enable tabs
         
         # Stop Progress
         self.progress_bar.stop()
@@ -656,9 +655,9 @@ class ScraperApp(ctk.CTk):
         self.limit_entry.insert(0, "0")
         
         # 3. Reset Tabs & Ministry
-        self.tab_view.set("Cào Toàn Bộ") # Default tab (need to check name)
+        self.tab_view.set("Toàn Bộ") # Default tab (need to check name)
         # Tab names are defined in init. 
-        # Check logic: self.tab_all = self.tab_view.add("Cào Toàn Bộ")
+        # Check logic: self.tab_all = self.tab_view.add("Toàn Bộ")
         # To switch tab, use tab name string.
         
         self.combo_ministry.set("Bộ Y tế")
