@@ -1,0 +1,854 @@
+[
+    {
+        "code": "88",
+        "name": "Ban Quản lý lăng Chủ tịch Hồ Chí Minh",
+        "nameEn": "Ho Chi Minh Mausoleum Management Board",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "89",
+        "name": "Bảo hiểm xã hội Việt Nam",
+        "nameEn": "Vietnam Social Security",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "90",
+        "name": "Bộ Công an",
+        "nameEn": "Ministry of Public Security",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "91",
+        "name": "Bộ Công Thương",
+        "nameEn": "Ministry of Industry and Trade",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "92",
+        "name": "Bộ Giáo dục và Đào tạo",
+        "nameEn": "Ministry of Education and Training",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "199",
+        "name": "Bộ Giao thông Vận tải",
+        "nameEn": "Ministry of Transport",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "94",
+        "name": "Bộ Kế hoạch và Đầu tư",
+        "nameEn": "Ministry of Planning and Investment",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "95",
+        "name": "Bộ Khoa học và Công nghệ",
+        "nameEn": "Ministry of Science and Technology",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "96",
+        "name": "Bộ Lao động - Thương binh và Xã hội",
+        "nameEn": "Ministry of Labor, War Invalids and Social Affairs",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "97",
+        "name": "Bộ Ngoại giao",
+        "nameEn": "Foreign office",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "98",
+        "name": "Bộ Nội vụ",
+        "nameEn": "Home Office",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "99",
+        "name": "Bộ Nông nghiệp và Phát triển nông thôn",
+        "nameEn": "Ministry of Agriculture and Rural Development",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "100",
+        "name": "Bộ Quốc phòng",
+        "nameEn": "Ministry of Defense",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "101",
+        "name": "Bộ Tài chính",
+        "nameEn": "Ministry of Finance",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "13",
+        "name": "UBND tỉnh Lào Cai",
+        "nameEn": "Lao Cai Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "102",
+        "name": "Bộ Tài Nguyên và Môi trường",
+        "nameEn": "Ministry of Natural Resources and Environment",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "103",
+        "name": "Bộ Thông tin và Truyền thông",
+        "nameEn": "Ministry of Information and Communications",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "104",
+        "name": "Bộ Tư pháp",
+        "nameEn": "Ministry of Justice",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "200",
+        "name": "Bộ Văn hóa, Thể thao và Du lịch",
+        "nameEn": "Ministry of Culture, Sports and Tourism",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "106",
+        "name": "Bộ Xây dựng",
+        "nameEn": "Ministry of Construction",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "107",
+        "name": "Bộ Y tế",
+        "nameEn": "Ministry of Health",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "108",
+        "name": "Đài Tiếng nói Việt Nam",
+        "nameEn": "Voice of Vietnam",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "109",
+        "name": "Đài Truyền hình Việt Nam",
+        "nameEn": "Vietnam Television Station",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "110",
+        "name": "Học viện Chính trị Quốc gia Hồ Chí Minh",
+        "nameEn": "Ho Chi Minh National Academy of Politics",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "111",
+        "name": "Kiểm toán Nhà nước",
+        "nameEn": "State Audit",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "112",
+        "name": "Ngân hàng Nhà nước Việt Nam",
+        "nameEn": "State Bank of Vietnam",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "113",
+        "name": "Ngân hàng Phát triển Việt Nam",
+        "nameEn": "Vietnam Development Bank",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "64",
+        "name": "Tập đoàn Bưu chính - Viễn thông (VNPT)",
+        "nameEn": "Vietnam Posts and Telecommunications Group (VNPT)",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "65",
+        "name": "Tập đoàn công nghiệp Cao su Việt Nam",
+        "nameEn": "Vietnam Rubber Industry Group",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "70",
+        "name": "Tập đoàn Công nghiệp Hóa chất Việt Nam",
+        "nameEn": "Vietnam Chemical Industry Group",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "66",
+        "name": "Tập đoàn Công nghiệp Than - Khoáng sản Việt Nam",
+        "nameEn": "Vietnam National Coal - Mineral Industries Group",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "67",
+        "name": "Tập đoàn Dầu khí Quốc gia Việt Nam",
+        "nameEn": "Vietnam National Oil and Gas Group",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "143",
+        "name": "Tập đoàn Điện lực Việt Nam",
+        "nameEn": "Vietnam Electricity Group",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "146",
+        "name": "Tập đoàn Xăng dầu Việt Nam (Petrolimex)",
+        "nameEn": "Vietnam National Petroleum Group (Petrolimex)",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "87",
+        "name": "Thanh tra Chính phủ",
+        "nameEn": "Government Inspector",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "114",
+        "name": "Thông tấn xã Việt Nam",
+        "nameEn": "Vietnam News Agency",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "203",
+        "name": "Tòa án nhân dân tối cao",
+        "nameEn": "Supreme People's Court",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "72",
+        "name": "Tổng công ty Cà phê Việt Nam",
+        "nameEn": "Vietnam Coffee Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "205",
+        "name": "Tổng công ty Cảng Hàng không Việt Nam",
+        "nameEn": "Vietnam Airports Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "202",
+        "name": "Tổng công ty Đầu tư phát triển đường cao tốc Việt Nam",
+        "nameEn": "Vietnam Expressway Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "120",
+        "name": "Tổng công ty Đầu tư và kinh doanh vốn nhà nước",
+        "nameEn": "State Capital Investment Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "75",
+        "name": "Tổng công ty Đường sắt Việt Nam",
+        "nameEn": "Vietnam Railway Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "77",
+        "name": "Tổng công ty Hàng hải Việt Nam",
+        "nameEn": "Vietnam National Shipping Lines",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "78",
+        "name": "Tổng công ty Hàng không Việt Nam",
+        "nameEn": "Vietnam Airlines Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "206",
+        "name": "Tổng công ty Lâm nghiệp Việt Nam",
+        "nameEn": "Vietnam Forestry Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "79",
+        "name": "Tổng công ty Lương thực miền Bắc",
+        "nameEn": "Northern Food Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "80",
+        "name": "Tổng công ty Lương thực miền Nam",
+        "nameEn": "Southern Food Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "82",
+        "name": "Tổng công ty Thuốc lá Việt Nam",
+        "nameEn": "Vietnam Tobacco Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "204",
+        "name": "Tổng công ty Viễn thông MobiFone",
+        "nameEn": "MobiFone Telecommunications Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "81",
+        "name": "Tổng công ty Thép Việt Nam",
+        "nameEn": "Vietnam Steel Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "3",
+        "name": "UBND thành phố Cần Thơ",
+        "nameEn": "Can Tho City People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "76",
+        "name": "Tổng công ty Giấy Việt Nam",
+        "nameEn": "Vietnam Paper Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "5",
+        "name": "UBND thành phố Đà Nẵng",
+        "nameEn": "Danang City People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "74",
+        "name": "Tổng công ty Công nghiệp Xi măng Việt Nam",
+        "nameEn": "Vietnam Cement Industry Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "1",
+        "name": "UBND thành phố Hà Nội",
+        "nameEn": "Hanoi City People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "73",
+        "name": "Tổng công ty Công nghiệp tàu thủy",
+        "nameEn": "Shipbuilding Industry Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "71",
+        "name": "Tập đoàn Viễn thông quân đội",
+        "nameEn": "Military Telecommunications Group",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "2",
+        "name": "UBND thành phố Hồ Chí Minh",
+        "nameEn": "Ho Chi Minh City People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "6",
+        "name": "UBND tỉnh An Giang",
+        "nameEn": "An Giang Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "26",
+        "name": "UBND tỉnh Hà Nam",
+        "nameEn": "People's Committee of Ha Nam province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "4",
+        "name": "UBND tỉnh Hải Dương",
+        "nameEn": "Hai Duong Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "29",
+        "name": "UBND tỉnh Hậu Giang",
+        "nameEn": "People's Committee of Hau Giang province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "30",
+        "name": "UBND tỉnh Hòa Bình",
+        "nameEn": "People's Committee of Hoa Binh province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "11",
+        "name": "UBND tỉnh Bắc Ninh",
+        "nameEn": "People's Committee of Bac Ninh province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "33",
+        "name": "UBND tỉnh Kiên Giang",
+        "nameEn": "People's Committee of Kien Giang province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "34",
+        "name": "UBND tỉnh Kon Tum",
+        "nameEn": "Kon Tum Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "17",
+        "name": "UBND tỉnh Cà Mau",
+        "nameEn": "People's Committee of Ca Mau province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "18",
+        "name": "UBND tỉnh Cao Bằng",
+        "nameEn": "Cao Bang Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "39",
+        "name": "UBND tỉnh Long An",
+        "nameEn": "Long An Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "19",
+        "name": "UBND tỉnh Đắk Lắk",
+        "nameEn": "Dak Lak Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "40",
+        "name": "UBND tỉnh Nam Định",
+        "nameEn": "Nam Dinh Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "21",
+        "name": "UBND tỉnh Điện Biên",
+        "nameEn": "People's Committee of Dien Bien province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "22",
+        "name": "UBND tỉnh Đồng Nai",
+        "nameEn": "Dong Nai Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "43",
+        "name": "UBND tỉnh Ninh Thuận",
+        "nameEn": "Ninh Thuan Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "23",
+        "name": "UBND tỉnh Đồng Tháp",
+        "nameEn": "People's Committee of Dong Thap province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "24",
+        "name": "UBND tỉnh Gia Lai",
+        "nameEn": "Gia Lai Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "45",
+        "name": "UBND tỉnh Phú Yên",
+        "nameEn": "People's Committee of Phu Yen province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "46",
+        "name": "UBND tỉnh Quảng Bình",
+        "nameEn": "People's Committee of Quang Binh province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "47",
+        "name": "UBND tỉnh Quảng Nam",
+        "nameEn": "Quang Nam Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "27",
+        "name": "UBND tỉnh Hà Tĩnh",
+        "nameEn": "People's Committee of Ha Tinh province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "28",
+        "name": "UBND thành phố Hải Phòng",
+        "nameEn": "Hai Phong City People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "51",
+        "name": "UBND tỉnh Sóc Trăng",
+        "nameEn": "People's Committee of Soc Trang province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "31",
+        "name": "UBND tỉnh Hưng Yên",
+        "nameEn": "People's Committee of Hung Yen province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "32",
+        "name": "UBND tỉnh Khánh Hòa",
+        "nameEn": "Khanh Hoa Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "54",
+        "name": "UBND tỉnh Thái Bình",
+        "nameEn": "Thai Binh Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "35",
+        "name": "UBND tỉnh Lai Châu",
+        "nameEn": "Lai Chau Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "37",
+        "name": "UBND tỉnh Lạng Sơn",
+        "nameEn": "People's Committee of Lang Son province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "58",
+        "name": "UBND tỉnh Tiền Giang",
+        "nameEn": "Tien Giang Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "59",
+        "name": "UBND tỉnh Trà Vinh",
+        "nameEn": "People's Committee of Tra Vinh province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "36",
+        "name": "UBND tỉnh Lâm Đồng",
+        "nameEn": "Lam Dong Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "62",
+        "name": "UBND tỉnh Vĩnh Phúc",
+        "nameEn": "People's Committee of Vinh Phuc province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "41",
+        "name": "UBND tỉnh Nghệ An",
+        "nameEn": "People's Committee of Nghe An province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "42",
+        "name": "UBND tỉnh Ninh Bình",
+        "nameEn": "Ninh Binh Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "44",
+        "name": "UBND tỉnh Phú Thọ",
+        "nameEn": "People's Committee of Phu Tho province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "38",
+        "name": "UBND tỉnh Bình Định",
+        "nameEn": "People's Committee of Binh Dinh province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "7",
+        "name": "UBND tỉnh Bà Rịa-Vũng Tàu",
+        "nameEn": "People's Committee of Ba Ria-Vung Tau province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "48",
+        "name": "UBND tỉnh Quảng Ngãi",
+        "nameEn": "Quang Ngai Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "8",
+        "name": "UBND tỉnh Bắc Giang",
+        "nameEn": "People's Committee of Bac Giang province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "49",
+        "name": "UBND tỉnh Quảng Ninh",
+        "nameEn": "Quang Ninh Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "9",
+        "name": "UBND tỉnh Bắc Kạn",
+        "nameEn": "People's Committee of Bac Kan province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "50",
+        "name": "UBND tỉnh Quảng Trị",
+        "nameEn": "Quang Tri Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "10",
+        "name": "UBND tỉnh Bạc Liêu",
+        "nameEn": "Bac Lieu Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "52",
+        "name": "UBND tỉnh Sơn La",
+        "nameEn": "People's Committee of Son La province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "12",
+        "name": "UBND tỉnh Bến Tre",
+        "nameEn": "Ben Tre Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "53",
+        "name": "UBND tỉnh Tây Ninh",
+        "nameEn": "People's Committee of Tay Ninh province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "14",
+        "name": "UBND tỉnh Bình Dương",
+        "nameEn": "Binh Duong Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "15",
+        "name": "UBND tỉnh Bình Phước",
+        "nameEn": "People's Committee of Binh Phuoc province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "55",
+        "name": "UBND tỉnh Thái Nguyên",
+        "nameEn": "People's Committee of Thai Nguyen province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "16",
+        "name": "UBND tỉnh Bình Thuận",
+        "nameEn": "People's Committee of Binh Thuan province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "56",
+        "name": "UBND tỉnh Thanh Hóa",
+        "nameEn": "Thanh Hoa Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "57",
+        "name": "UBND thành phố Huế",
+        "nameEn": "Hue City People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "20",
+        "name": "UBND tỉnh Đắk Nông",
+        "nameEn": "Dak Nong Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "60",
+        "name": "UBND tỉnh Tuyên Quang",
+        "nameEn": "People's Committee of Tuyen Quang province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "61",
+        "name": "UBND tỉnh Vĩnh Long",
+        "nameEn": "People's Committee of Vinh Long province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "63",
+        "name": "UBND tỉnh Yên Bái",
+        "nameEn": "Yen Bai Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "25",
+        "name": "UBND tỉnh Hà Giang",
+        "nameEn": "People's Committee of Ha Giang province",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "86",
+        "name": "Văn phòng Chính phủ",
+        "nameEn": "Government Office",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "84",
+        "name": "Văn phòng Chủ tịch nước",
+        "nameEn": "Office of the President",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "85",
+        "name": "Văn phòng Quốc hội",
+        "nameEn": "Office of the National Assembly",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "83",
+        "name": "Văn phòng Trung ương Đảng",
+        "nameEn": "Central Party Office",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "117",
+        "name": "Viện Hàn lâm Khoa học và Công nghệ Việt Nam​",
+        "nameEn": "Vietnam Academy of Science and Technology",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "118",
+        "name": "Viện Hàn lâm Khoa học xã hội Việt Nam",
+        "nameEn": "Vietnam Academy of Social Sciences",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "119",
+        "name": "Viện Kiểm sát nhân dân tối cao",
+        "nameEn": "Supreme People's Procuracy",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "116",
+        "name": "Ủy ban Dân tộc",
+        "nameEn": "Ethnic Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "201",
+        "name": "Ủy ban quản lý vốn nhà nước",
+        "nameEn": "State Capital Management Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "207",
+        "name": "Khác",
+        "nameEn": "Other",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "208",
+        "name": "Tổng liên đoàn lao động Việt Nam",
+        "nameEn": "Vietnam General Confederation of Labor",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "209",
+        "name": "Tổng công ty Sông Đà",
+        "nameEn": "Song Da Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "210",
+        "name": "Tập đoàn Bảo Việt",
+        "nameEn": "Bao Viet Group",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "211",
+        "name": "Tập đoàn Dệt May Việt Nam",
+        "nameEn": "Vietnam Textile and Garment Group",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "212",
+        "name": "Tổng công ty truyền thông đa phương tiện VTC",
+        "nameEn": "VTC Multimedia Communications Corporation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "213",
+        "name": "TỔNG CÔNG TY XI MĂNG VIỆT NAM.",
+        "nameEn": "VIETNAM CEMENT CORPORATION.",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "214",
+        "name": "Tập đoàn Công nghiệp - Năng lượng Quốc gia Việt Nam",
+        "nameEn": "Vietnam National Energy and Industry Group",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "300",
+        "name": "Chờ xác nhận lại",
+        "nameEn": "Waiting for confirmation",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "310",
+        "name": "Bộ Nông nghiệp và Môi trường",
+        "nameEn": "Ministry of Agriculture and Environment",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "311",
+        "name": "Bộ Dân tộc và Tôn giáo",
+        "nameEn": "Ministry of Ethnic Minorities and Religions",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "312",
+        "name": "Tập đoàn Hóa chất Việt Nam",
+        "nameEn": "Vietnam Chemical Group",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "313",
+        "name": "Sở y tế tỉnh Gia Lai",
+        "nameEn": "Gia Lai Provincial Department of Health",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "314",
+        "name": "Tổng công ty khoáng sản TKV - CTCP CHI NHÁNH LUYỆN ĐỒNG LÀO CAI-VIMICO",
+        "nameEn": "TKV Minerals Corporation - JSC LAO CAI COPPER STEELING BRANCH - VIMICO",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "315",
+        "name": "Sở y tế tỉnh Đồng Nai",
+        "nameEn": "Dong Nai Provincial Department of Health",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "316",
+        "name": "UBND tỉnh Lào Cai",
+        "nameEn": "Lao Cai Provincial People's Committee",
+        "categoryTypeCode": "classification_dependent"
+    },
+    {
+        "code": "317",
+        "name": "Ủy ban Mặt trận Tổ quốc Việt Nam",
+        "nameEn": "Central Committee of the Vietnam Fatherland Front",
+        "categoryTypeCode": "classification_dependent"
+    }
+]

@@ -1,0 +1,1502 @@
+[
+    {
+        "code": "SA",
+        "name": "Saudi Arabia",
+        "nameEn": "Saudi Arabia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AF",
+        "name": "Afghanistan",
+        "nameEn": "Afghanistan",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "Cssxsxs",
+        "name": "Category 5",
+        "nameEn": "Category 5",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "EG",
+        "name": "Egypt",
+        "nameEn": "Egypt",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AL",
+        "name": "Albania",
+        "nameEn": "Albania",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "DZ",
+        "name": "Algeria",
+        "nameEn": "Algeria",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AD",
+        "name": "Andorra",
+        "nameEn": "Andorra",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AI",
+        "name": "Anguilla",
+        "nameEn": "Anguilla",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GB",
+        "name": "United Kingdom of Great Britain and Northern Ireland (the)",
+        "nameEn": "United Kingdom of Great Britain and Northern Ireland (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AG",
+        "name": "Antigua and Barbuda",
+        "nameEn": "Antigua and Barbuda",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AT",
+        "name": "Austria",
+        "nameEn": "Austria",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AR",
+        "name": "Argentina",
+        "nameEn": "Argentina",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AM",
+        "name": "Armenia",
+        "nameEn": "Armenia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AW",
+        "name": "Aruba",
+        "nameEn": "Aruba",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AZ",
+        "name": "Azerbaijan",
+        "nameEn": "Azerbaijan",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PL",
+        "name": "Poland",
+        "nameEn": "Poland",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BS",
+        "name": "Bahamas (the)",
+        "nameEn": "Bahamas (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BH",
+        "name": "Bahrain",
+        "nameEn": "Bahrain",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BD",
+        "name": "Bangladesh",
+        "nameEn": "Bangladesh",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BB",
+        "name": "Barbados",
+        "nameEn": "Barbados",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BY",
+        "name": "Belarus",
+        "nameEn": "Belarus",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BZ",
+        "name": "Belize",
+        "nameEn": "Belize",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BJ",
+        "name": "Benin",
+        "nameEn": "Benin",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BM",
+        "name": "Bermuda",
+        "nameEn": "Bermuda",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BT",
+        "name": "Bhutan",
+        "nameEn": "Bhutan",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BE",
+        "name": "Belgium",
+        "nameEn": "Belgium",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BO",
+        "name": "Bolivia (Plurinational State of)",
+        "nameEn": "Bolivia (Plurinational State of)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BQ",
+        "name": "Bonaire, Sint Eustatius and Saba",
+        "nameEn": "Bonaire, Sint Eustatius and Saba",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BA",
+        "name": "Bosnia and Herzegovina",
+        "nameEn": "Bosnia and Herzegovina",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BW",
+        "name": "Botswana",
+        "nameEn": "Botswana",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PT",
+        "name": "Portugal",
+        "nameEn": "Portugal",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CI",
+        "name": "Côte d'Ivoire",
+        "nameEn": "Côte d'Ivoire",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BR",
+        "name": "Brazil",
+        "nameEn": "Brazil",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BN",
+        "name": "Brunei Darussalam",
+        "nameEn": "Brunei Darussalam",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BG",
+        "name": "Bulgaria",
+        "nameEn": "Bulgaria",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BF",
+        "name": "Burkina Faso",
+        "nameEn": "Burkina Faso",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BI",
+        "name": "Burundi",
+        "nameEn": "Burundi",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CV",
+        "name": "Cabo Verde",
+        "nameEn": "Cape Verde",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "UM",
+        "name": "United States Minor Outlying Islands (the)",
+        "nameEn": "United States Minor Outlying Islands (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AE",
+        "name": "United Arab Emirates (the)",
+        "nameEn": "United Arab Emirates (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CM",
+        "name": "Cameroon",
+        "nameEn": "Cameroon",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "KH",
+        "name": "Cambodia",
+        "nameEn": "Cambodia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CA",
+        "name": "Canada",
+        "nameEn": "Canada",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CL",
+        "name": "Chile",
+        "nameEn": "Chile",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CO",
+        "name": "Colombia",
+        "nameEn": "Colombia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "KM",
+        "name": "Comoros (the)",
+        "nameEn": "Comoros (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CR",
+        "name": "Costa Rica",
+        "nameEn": "Costa Rica",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AO",
+        "name": "Angola",
+        "nameEn": "Angola",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TD",
+        "name": "Chad",
+        "nameEn": "Chad",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CG",
+        "name": "Congo (the)",
+        "nameEn": "Congo (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CD",
+        "name": "Congo (the Democratic Republic of the)",
+        "nameEn": "Congo (the Democratic Republic of the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "DO",
+        "name": "Dominican Republic (the)",
+        "nameEn": "Dominican Republic (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "NE",
+        "name": "Niger (the)",
+        "nameEn": "Niger (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MF",
+        "name": "Saint Martin (French part)",
+        "nameEn": "Saint Martin (French part)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CZ",
+        "name": "Czechia",
+        "nameEn": "Czechia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CY",
+        "name": "Cyprus",
+        "nameEn": "Cyprus",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TZ",
+        "name": "Tanzania, United Republic of",
+        "nameEn": "Tanzania, United Republic of",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CF",
+        "name": "Central African Republic (the)",
+        "nameEn": "Central African Republic (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "HR",
+        "name": "Croatia",
+        "nameEn": "Croatia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CU",
+        "name": "Cuba",
+        "nameEn": "Cuba",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CW",
+        "name": "Curaçao",
+        "nameEn": "Curaçao",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "DJ",
+        "name": "Djibouti",
+        "nameEn": "Djibouti",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "DM",
+        "name": "Dominica",
+        "nameEn": "Dominica",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TW",
+        "name": "Taiwan (Province of China)",
+        "nameEn": "Taiwan (Province of China)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "DK",
+        "name": "Denmark",
+        "nameEn": "Denmark",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BV",
+        "name": "Bouvet Island",
+        "nameEn": "Bouvet Island",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CX",
+        "name": "Christmas Island",
+        "nameEn": "Christmas Island",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "IM",
+        "name": "Isle of Man",
+        "nameEn": "Isle of Man",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "NF",
+        "name": "Norfolk Island",
+        "nameEn": "Norfolk Island",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TL",
+        "name": "Timor-Leste",
+        "nameEn": "Timor-Leste",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "DE",
+        "name": "Germany",
+        "nameEn": "Germany",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "EC",
+        "name": "Ecuador",
+        "nameEn": "Ecuador",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SV",
+        "name": "El Salvador",
+        "nameEn": "El Salvador",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "ER",
+        "name": "Eritrea",
+        "nameEn": "Eritrea",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "EE",
+        "name": "Estonia",
+        "nameEn": "Estonia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SZ",
+        "name": "Eswatini",
+        "nameEn": "Eswatini",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "ET",
+        "name": "Ethiopia",
+        "nameEn": "Ethiopia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "FJ",
+        "name": "Fiji",
+        "nameEn": "Fiji",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GA",
+        "name": "Gabon",
+        "nameEn": "Gabon",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GM",
+        "name": "Gambia (the)",
+        "nameEn": "Gambia (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GE",
+        "name": "Georgia",
+        "nameEn": "Georgia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GH",
+        "name": "Ghana",
+        "nameEn": "Ghana",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GI",
+        "name": "Gibraltar",
+        "nameEn": "Gibraltar",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GL",
+        "name": "Greenland",
+        "nameEn": "Greenland",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GD",
+        "name": "Grenada",
+        "nameEn": "Grenada",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GP",
+        "name": "Guadeloupe",
+        "nameEn": "Guadeloupe",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GU",
+        "name": "Guam",
+        "nameEn": "Guam",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GT",
+        "name": "Guatemala",
+        "nameEn": "Guatemala",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GG",
+        "name": "Guernsey",
+        "nameEn": "Guernsey",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GF",
+        "name": "French Guiana",
+        "nameEn": "French Guiana",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GN",
+        "name": "Guinea",
+        "nameEn": "Guinea",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GQ",
+        "name": "Equatorial Guinea",
+        "nameEn": "Equatorial Guinea",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GW",
+        "name": "Guinea-Bissau",
+        "nameEn": "Guinea-Bissau",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GY",
+        "name": "Guyana",
+        "nameEn": "Guyana",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "NL",
+        "name": "Netherlands (the)",
+        "nameEn": "Netherlands (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "HT",
+        "name": "Haiti",
+        "nameEn": "Haiti",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "KR",
+        "name": "Korea (the Republic of)",
+        "nameEn": "Korea (the Republic of)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "US",
+        "name": "United States of America (the)",
+        "nameEn": "United States of America (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "HN",
+        "name": "Honduras",
+        "nameEn": "Honduras",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "HK",
+        "name": "Hong Kong",
+        "nameEn": "Hong Kong",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "HU",
+        "name": "Hungary",
+        "nameEn": "Hungary",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GR",
+        "name": "Greece",
+        "nameEn": "Greece",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "IS",
+        "name": "Iceland",
+        "nameEn": "Iceland",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "ID",
+        "name": "Indonesia",
+        "nameEn": "Indonesia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "IR",
+        "name": "Iran (Islamic Republic of)",
+        "nameEn": "Iran (Islamic Republic of)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "IQ",
+        "name": "Iraq",
+        "nameEn": "Iraq",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "IE",
+        "name": "Ireland",
+        "nameEn": "Ireland",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "IL",
+        "name": "Israel",
+        "nameEn": "Israel",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "JM",
+        "name": "Jamaica",
+        "nameEn": "Jamaica",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "JE",
+        "name": "Jersey",
+        "nameEn": "Jersey",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "JO",
+        "name": "Jordan",
+        "nameEn": "Jordan",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "KZ",
+        "name": "Kazakhstan",
+        "nameEn": "Kazakhstan",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "KE",
+        "name": "Kenya",
+        "nameEn": "Kenya",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "KI",
+        "name": "Kiribati",
+        "nameEn": "Kiribati",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "KW",
+        "name": "Kuwait",
+        "nameEn": "Kuwait",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "KG",
+        "name": "Kyrgyzstan",
+        "nameEn": "Kyrgyzstan",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "IO",
+        "name": "British Indian Ocean Territory (the)",
+        "nameEn": "British Indian Ocean Territory (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "LA",
+        "name": "Lao People's Democratic Republic (the)",
+        "nameEn": "Lao People's Democratic Republic (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "LV",
+        "name": "Latvia",
+        "nameEn": "Latvia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "LS",
+        "name": "Lesotho",
+        "nameEn": "Lesotho",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "LB",
+        "name": "Lebanon",
+        "nameEn": "Lebanon",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "LR",
+        "name": "Liberia",
+        "nameEn": "Liberia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "LY",
+        "name": "Libya",
+        "nameEn": "Libya",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "LI",
+        "name": "Liechtenstein",
+        "nameEn": "Liechtenstein",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "FM",
+        "name": "Micronesia (Federated States of)",
+        "nameEn": "Micronesia (Federated States of)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "RU",
+        "name": "Russian Federation (the)",
+        "nameEn": "Russian Federation (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "LT",
+        "name": "Lithuania",
+        "nameEn": "Lithuania",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "LU",
+        "name": "Luxembourg",
+        "nameEn": "Luxembourg",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MO",
+        "name": "Macao",
+        "nameEn": "Macau",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MK",
+        "name": "Republic of North Macedonia",
+        "nameEn": "Republic of North Macedonia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MG",
+        "name": "Madagascar",
+        "nameEn": "Madagascar",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MW",
+        "name": "Malawi",
+        "nameEn": "Malawi",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MY",
+        "name": "Malaysia",
+        "nameEn": "Malaysia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MV",
+        "name": "Maldives",
+        "nameEn": "Maldives",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "ML",
+        "name": "Mali",
+        "nameEn": "Mali",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MT",
+        "name": "Malta",
+        "nameEn": "Malta",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MA",
+        "name": "Morocco",
+        "nameEn": "Morocco",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MQ",
+        "name": "Martinique",
+        "nameEn": "Martinique",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MR",
+        "name": "Mauritania",
+        "nameEn": "Mauritania",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MU",
+        "name": "Mauritius",
+        "nameEn": "Mauritius",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "YT",
+        "name": "Mayotte",
+        "nameEn": "Mayotte",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MX",
+        "name": "Mexico",
+        "nameEn": "Mexico",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MD",
+        "name": "Moldova (the Republic of)",
+        "nameEn": "Moldova (the Republic of)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MC",
+        "name": "Monaco",
+        "nameEn": "Monaco",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "ME",
+        "name": "Montenegro",
+        "nameEn": "Montenegro",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MS",
+        "name": "Montserrat",
+        "nameEn": "Montserrat",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MZ",
+        "name": "Mozambique",
+        "nameEn": "Mozambique",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MN",
+        "name": "Mongolia",
+        "nameEn": "Mongolia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MM",
+        "name": "Myanmar",
+        "nameEn": "Myanmar",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "IN",
+        "name": "India",
+        "nameEn": "India",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "NO",
+        "name": "Norway",
+        "nameEn": "Norway",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AQ",
+        "name": "Antarctica",
+        "nameEn": "Antarctica",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "GS",
+        "name": "South Georgia and the South Sandwich Islands",
+        "nameEn": "South Georgia and the South Sandwich Islands",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "ZA",
+        "name": "South Africa",
+        "nameEn": "South Africa",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SS",
+        "name": "South Sudan",
+        "nameEn": "South Sudan",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "NA",
+        "name": "Namibia",
+        "nameEn": "Namibia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "NR",
+        "name": "Nauru",
+        "nameEn": "Nauru",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "NP",
+        "name": "Nepal",
+        "nameEn": "Nepal",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "NC",
+        "name": "New Caledonia",
+        "nameEn": "New Caledonia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "NZ",
+        "name": "New Zealand",
+        "nameEn": "New Zealand",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "JP",
+        "name": "Japan",
+        "nameEn": "Japan",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "NI",
+        "name": "Nicaragua",
+        "nameEn": "Nicaragua",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "NG",
+        "name": "Nigeria",
+        "nameEn": "Nigeria",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "NU",
+        "name": "Niue",
+        "nameEn": "Niue",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "OM",
+        "name": "Oman",
+        "nameEn": "Oman",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PK",
+        "name": "Pakistan",
+        "nameEn": "Pakistan",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PW",
+        "name": "Palau",
+        "nameEn": "Palau",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PS",
+        "name": "Palestine, State of",
+        "nameEn": "Palestine, State of",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PA",
+        "name": "Panama",
+        "nameEn": "Panama",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PG",
+        "name": "Papua New Guinea",
+        "nameEn": "Papua New Guinea",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PY",
+        "name": "Paraguay",
+        "nameEn": "Paraguay",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PE",
+        "name": "Peru",
+        "nameEn": "Peru",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "FR",
+        "name": "France",
+        "nameEn": "France",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "FI",
+        "name": "Finland",
+        "nameEn": "Finland",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PH",
+        "name": "Philippines (the)",
+        "nameEn": "Philippines (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PN",
+        "name": "Pitcairn",
+        "nameEn": "Pitcairn",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PF",
+        "name": "French Polynesia",
+        "nameEn": "French Polynesia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PR",
+        "name": "Puerto Rico",
+        "nameEn": "Puerto Rico",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "QA",
+        "name": "Qatar",
+        "nameEn": "Qatar",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MP",
+        "name": "Northern Mariana Islands (the)",
+        "nameEn": "Northern Mariana Islands (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "KY",
+        "name": "Cayman Islands (the)",
+        "nameEn": "Cayman Islands (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CC",
+        "name": "Cocos (Keeling) Islands (the)",
+        "nameEn": "Cocos (Keeling) Islands (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CK",
+        "name": "Cook Islands (the)",
+        "nameEn": "Cook Islands (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "FK",
+        "name": "Falkland Islands (the) [Malvinas]",
+        "nameEn": "Falkland Islands (the) [Malvinas]",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "FO",
+        "name": "Faroe Islands (the)",
+        "nameEn": "Faroe Islands (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "HM",
+        "name": "Heard Island and McDonald Islands",
+        "nameEn": "Heard Island and McDonald Islands",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AX",
+        "name": "Åland Islands",
+        "nameEn": "Åland Islands",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "MH",
+        "name": "Marshall Islands (the)",
+        "nameEn": "Marshall Islands (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SB",
+        "name": "Solomon Islands",
+        "nameEn": "Solomon Islands",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TC",
+        "name": "Turks and Caicos Islands (the)",
+        "nameEn": "Turks and Caicos Islands (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "VG",
+        "name": "Virgin Islands (British)",
+        "nameEn": "Virgin Islands (British)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "VI",
+        "name": "Virgin Islands (U.S.)",
+        "nameEn": "Virgin Islands (U.S.)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "RE",
+        "name": "Réunion",
+        "nameEn": "Reunion",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "RO",
+        "name": "Romania",
+        "nameEn": "Romania",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "RW",
+        "name": "Rwanda",
+        "nameEn": "Rwanda",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "BL",
+        "name": "Saint Barthélemy",
+        "nameEn": "Saint Bartholomew",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SH",
+        "name": "Saint Helena, Ascension and Tristan da Cunha",
+        "nameEn": "Saint Helena, Ascension and Tristan da Cunha",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "KN",
+        "name": "Saint Kitts and Nevis",
+        "nameEn": "Saint Kitts and Nevis",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "LC",
+        "name": "Saint Lucia",
+        "nameEn": "Saint Lucia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "PM",
+        "name": "Saint Pierre and Miquelon",
+        "nameEn": "Saint Pierre and Miquelon",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "VC",
+        "name": "Saint Vincent and the Grenadines",
+        "nameEn": "Saint Vincent and the Grenadines",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "WS",
+        "name": "Samoa",
+        "nameEn": "Samoa",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AS",
+        "name": "American Samoa",
+        "nameEn": "American Samoa",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SM",
+        "name": "San Marino",
+        "nameEn": "San Marino",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "ST",
+        "name": "Sao Tome and Principe",
+        "nameEn": "Sao Tome and Principe",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SN",
+        "name": "Senegal",
+        "nameEn": "Senegal",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "RS",
+        "name": "Serbia",
+        "nameEn": "Serbia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SC",
+        "name": "Seychelles",
+        "nameEn": "Seychelles",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SL",
+        "name": "Sierra Leone",
+        "nameEn": "Sierra Leone",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SG",
+        "name": "Singapore",
+        "nameEn": "Singapore",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SX",
+        "name": "Sint Maarten (Dutch part)",
+        "nameEn": "Sint Maarten (Dutch part)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SK",
+        "name": "Slovakia",
+        "nameEn": "Slovakia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SI",
+        "name": "Slovenia",
+        "nameEn": "Slovenia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SO",
+        "name": "Somalia",
+        "nameEn": "Somalia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "LK",
+        "name": "Sri Lanka",
+        "nameEn": "Sri Lanka",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SD",
+        "name": "Sudan (the)",
+        "nameEn": "Sudan (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SR",
+        "name": "Suriname",
+        "nameEn": "Suriname",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SJ",
+        "name": "Svalbard and Jan Mayen",
+        "nameEn": "Svalbard and Jan Mayen",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SY",
+        "name": "Syrian Arab Republic",
+        "nameEn": "Syrian Arab Republic",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TJ",
+        "name": "Tajikistan",
+        "nameEn": "Tajikistan",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "ES",
+        "name": "Spain",
+        "nameEn": "Spain",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "EH",
+        "name": "Western Sahara",
+        "nameEn": "Western Sahara",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TH",
+        "name": "Thailand",
+        "nameEn": "Thailand",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TR",
+        "name": "Turkey",
+        "nameEn": "Turkey",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "SE",
+        "name": "Sweden",
+        "nameEn": "Sweden",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CH",
+        "name": "Switzerland",
+        "nameEn": "Switzerland",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TG",
+        "name": "Togo",
+        "nameEn": "Togo",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TK",
+        "name": "Tokelau",
+        "nameEn": "Tokelau",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TO",
+        "name": "Tonga",
+        "nameEn": "Tonga",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "KP",
+        "name": "Korea (the Democratic People's Republic of)",
+        "nameEn": "Korea (the Democratic People's Republic of)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TT",
+        "name": "Trinidad and Tobago",
+        "nameEn": "Trinidad and Tobago",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "CN",
+        "name": "China",
+        "nameEn": "China",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TN",
+        "name": "Tunisia",
+        "nameEn": "Tunisia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TM",
+        "name": "Turkmenistan",
+        "nameEn": "Turkmenistan",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TV",
+        "name": "Tuvalu",
+        "nameEn": "Tuvalu",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "AU",
+        "name": "Australia",
+        "nameEn": "Australia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "UG",
+        "name": "Uganda",
+        "nameEn": "Uganda",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "UA",
+        "name": "Ukraine",
+        "nameEn": "Ukraine",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "UY",
+        "name": "Uruguay",
+        "nameEn": "Uruguay",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "UZ",
+        "name": "Uzbekistan",
+        "nameEn": "Uzbekistan",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "VA",
+        "name": "Holy See (the)",
+        "nameEn": "Holy See (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "VU",
+        "name": "Vanuatu",
+        "nameEn": "Vanuatu",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "VE",
+        "name": "Venezuela (Bolivarian Republic of)",
+        "nameEn": "Venezuela (Bolivarian Republic of)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "VN",
+        "name": "Việt Nam",
+        "nameEn": "Vietnam",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "TF",
+        "name": "French Southern Territories (the)",
+        "nameEn": "French Southern Territories (the)",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "WF",
+        "name": "Wallis and Futuna",
+        "nameEn": "Wallis and Futuna",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "IT",
+        "name": "Italy",
+        "nameEn": "Italy",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "YE",
+        "name": "Yemen",
+        "nameEn": "Yemen",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "ZM",
+        "name": "Zambia",
+        "nameEn": "Zambia",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    },
+    {
+        "code": "ZW",
+        "name": "Zimbabwe",
+        "nameEn": "Zimbabwe",
+        "categoryTypeCode": "UM_COUNTRY LIST"
+    }
+]

@@ -7,6 +7,10 @@ import urllib.parse
 from playwright.sync_api import sync_playwright
 import os
 import requests
+import ssl
+from requests.adapters import HTTPAdapter
+from urllib3.util.ssl_ import create_urllib3_context
+from urllib3.poolmanager import PoolManager
 
 os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
 
@@ -563,6 +567,21 @@ def run(output_path=None, max_pages=None, ministry_filter="", search_keyword="",
         browser.close()
         print("Scraping completed.")
 
+    # SSL FIX for DH_KEY_TOO_SMALL
+    class LegacyAdapter(HTTPAdapter):
+        def init_poolmanager(self, connections, maxsize, block=False):
+            ctx = create_urllib3_context()
+            # Lower security level to allow smaller DH keys (legacy servers)
+            try:
+                ctx.set_ciphers('DEFAULT@SECLEVEL=1')
+            except Exception:
+                pass 
+            self.poolmanager = PoolManager(
+                num_pools=connections,
+                maxsize=maxsize,
+                block=block,
+                ssl_context=ctx
+            )
 def fetch_bid_detail(api_context, token, bid_id):
     url = f"https://muasamcong.mpi.gov.vn/o/egp-portal-contractor-selection-v2/services/lcnt_tbmt_ttc_ldt?token={token}"
     headers = {
@@ -1628,6 +1647,382 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
             pass
 
     print(f"Completed! Data saved to {output_path}")
+
+def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None):
+    """
+    New API-based scanning for 'Toàn Bộ' tab (All Investors).
+    Target:
+      1. Keyword 'y tế'
+      2. Keyword 'bệnh viện'
+    """
+    print("--- Starting API-based Investor Scan ---")
+    
+    if output_path is None:
+        output_path = "investors_data_api.xlsx"
+    if not output_path.endswith(".xlsx"):
+        output_path += ".xlsx"
+    
+    # 1. Load Mappings
+    country_map = {}
+    cqcq_map = {}
+    
+    try:
+        # Resolve paths relative to script or DATA_SAMPLE
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        data_sample_dir = os.path.join(base_dir, "DATA_SAMPLE")
+        
+        # Load Country
+        c_path = os.path.join(data_sample_dir, "Data-Country.json")
+        if os.path.exists(c_path):
+            with open(c_path, "r", encoding="utf-8") as f:
+                c_data = json.load(f)
+                for item in c_data:
+                    code = item.get("code")
+                    name = item.get("name")
+                    if code: country_map[code] = name
+        else:
+             print(f"Warning: {c_path} not found.")
+
+        # Load CQCQ
+        q_path = os.path.join(data_sample_dir, "Data-CQCQ.json")
+        if os.path.exists(q_path):
+            with open(q_path, "r", encoding="utf-8") as f:
+                q_data = json.load(f)
+                for item in q_data:
+                    code = item.get("code")
+                    name = item.get("name")
+                    if code: cqcq_map[code] = name
+        else:
+             print(f"Warning: {q_path} not found.")
+                
+        print(f"Loaded {len(country_map)} countries and {len(cqcq_map)} agencies.")
+    except Exception as e:
+        print(f"Warning: Could not load mapping files: {e}")
+
+    # SSL FIX for DH_KEY_TOO_SMALL
+    class LegacyAdapter(HTTPAdapter):
+        def init_poolmanager(self, connections, maxsize, block=False):
+            ctx = create_urllib3_context()
+            # Lower security level to allow smaller DH keys (legacy servers)
+            try:
+                ctx.set_ciphers('DEFAULT@SECLEVEL=1')
+            except Exception:
+                pass 
+            self.poolmanager = PoolManager(
+                num_pools=connections,
+                maxsize=maxsize,
+                block=block,
+                ssl_context=ctx
+            )
+
+    session = requests.Session()
+    adapter = LegacyAdapter()
+    session.mount('https://', adapter)
+
+    # 2. Pre-fetch Business Types
+    business_type_map = {}
+    try:
+        url_bt = "https://muasamcong.mpi.gov.vn/o/egp-portal-investor-approved-v2/services/get-business-type-list"
+        payload_bt = {"queryParams":{"categoryTypeCode":{"equals":"BUSINESS_TYPE"}}}
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        # Use session
+        resp = session.post(url_bt, json=payload_bt, headers=headers, timeout=10)
+        if resp.ok:
+            bt_list = resp.json()
+            for item in bt_list:
+                code = item.get("code")
+                name = item.get("name")
+                if code: business_type_map[code] = name
+            print(f"Loaded {len(business_type_map)} business types.")
+        else:
+            print("Failed to load business types.")
+    except Exception as e:
+        print(f"Error loading business types: {e}")
+
+    # 3. Helpers
+    def check_status():
+        if stop_event and stop_event.is_set():
+            raise InterruptedError("Stopped by user")
+        if pause_event and not pause_event.is_set():
+            print(">>> PAUSED...")
+            try:
+                pause_event.wait()
+                if stop_event and stop_event.is_set():
+                    raise InterruptedError("Stopped by user")
+                print(">>> RESUMED")
+            except Exception as e:
+                pass
+
+    area_cache = {} 
+    def get_area_name(code):
+        if not code: return ""
+        if code in area_cache: return area_cache[code]
+        
+        url = "https://muasamcong.mpi.gov.vn/o/egp-portal-investor-approved-v2/services/get-area-by-code"
+        payload = {"queryParams":{"code":{"equals": code}}}
+        try:
+            r = session.post(url, json=payload, headers=headers, timeout=10)
+            if r.ok:
+                data = r.json()
+                if data and isinstance(data, list) and len(data) > 0:
+                    name = data[0].get("name", "")
+                    area_cache[code] = name
+                    return name
+        except:
+            pass
+        return code
+
+    processed_org_codes = set()
+    all_rows = []
+    
+    if os.path.exists(output_path):
+        try:
+            print(f"Reading existing file: {output_path}")
+            df_old = pd.read_excel(output_path)
+            # Normalize column reading
+            if "Mã định danh" in df_old.columns:
+                processed_org_codes = set(df_old["Mã định danh"].dropna().astype(str))
+                all_rows = df_old.to_dict('records')
+            print(f"Loaded {len(all_rows)} existing records.")
+        except Exception as e:
+            print(f"Warning: could not read existing file: {e}")
+    
+    keywords = ["y tế", "bệnh viện"]
+    
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Origin": "https://muasamcong.mpi.gov.vn",
+        "Referer": "https://muasamcong.mpi.gov.vn/"
+    }
+
+    item_buffer = []
+
+    for kw in keywords:
+        print(f"Scanning keyword: '{kw}'")
+        page_idx = 0
+        total_pages = 1 
+        
+        while page_idx < total_pages:
+            check_status()
+            
+            url_1 = "https://muasamcong.mpi.gov.vn/o/egp-portal-investor-approved-v2/services/um/lookup-orgInfo"
+            payload_1 = {
+                "pageSize": 10,
+                "pageNumber": page_idx,
+                "queryParams": {
+                    "roleType": {"equals": "CDT"},
+                    "orgName": {"contains": None},
+                    "orgCode": {"contains": None},
+                    "orgNameOrOrgCode": {"contains": kw},
+                    "agencyName": {"in": None},
+                    "effRoleDate": {
+                        "greaterThanOrEqual": None,
+                        "lessThanOrEqual": None
+                    }
+                }
+            }
+            
+            try:
+                print(f"  Fetching page {page_idx + 1}...")
+                resp = session.post(url_1, json=payload_1, headers=headers, timeout=30)
+                if not resp.ok:
+                    print(f"  Error fetching page {page_idx}: {resp.status_code}. Retrying...")
+                    time.sleep(5)
+                    # Simple retry once
+                    try:
+                        resp = session.post(url_1, json=payload_1, headers=headers, timeout=30)
+                    except: pass
+                    
+                    if not resp.ok:
+                         print("  Skip this page due to error.")
+                         page_idx += 1
+                         continue
+
+                data = resp.json()
+                content_obj = data.get("ebidOrgInfos", {})
+                items = content_obj.get("content", [])
+                
+                # Update total pages from response
+                if "totalPages" in content_obj:
+                    total_pages = content_obj["totalPages"]
+                
+                if not items:
+                    print("  No items found on this page.")
+                    # If empty but total_pages says we are within range? 
+                    # Sometimes scan ends early.
+                    if page_idx >= total_pages - 1:
+                        break
+                    else:
+                        page_idx += 1
+                        continue
+                    
+                for item in items:
+                    check_status()
+                    
+                    org_code = item.get("orgCode")
+                    if not org_code: continue
+                    
+                    if str(org_code) in processed_org_codes:
+                        # print(f"    Skipping duplicate {org_code}")
+                        continue
+                    
+                    # API 2: Detail
+                    url_2 = "https://muasamcong.mpi.gov.vn/o/egp-portal-investor-approved-v2/services/um/org/get-detail-info"
+                    payload_2 = {"orgCode": org_code}
+                    
+                    detail_info = {}
+                    try:
+                        r2 = session.post(url_2, json=payload_2, headers=headers, timeout=10)
+                        if r2.ok:
+                            detail_json = r2.json()
+                            detail_info = detail_json.get("orgInfo", {})
+                    except Exception as e:
+                        print(f"    Error fetching detail for {org_code}: {e}")
+                    
+                    # Mapping Helpers
+                    def get_d(key, default=""):
+                        val = detail_info.get(key)
+                        if val: return val
+                        # Fallback to item (API 1)
+                        if key == "orgFullName": return item.get("orgFullname")
+                        if key == "orgEnName": return item.get("orgEnName")
+                        if key == "repName": return item.get("repFullname")
+                        return item.get(key, default)
+                    
+                    def fmt_date_arr(arr):
+                        if not arr or not isinstance(arr, list) or len(arr) < 3: return ""
+                        # Adjust for year, month, day. Usually [y, m, d, h, m, s]
+                        return f"{arr[2]:02}/{arr[1]:02}/{arr[0]}" 
+                    
+                    def fmt_timestamp(ts):
+                        if not ts: return ""
+                        try:
+                            if isinstance(ts, str): return ts # already string?
+                            dt = datetime.fromtimestamp(int(ts) / 1000)
+                            return dt.strftime("%d/%m/%Y")
+                        except: return str(ts)
+                    
+                    row = {}
+                    row["Tên đơn vị (đầy đủ)"] = get_d("orgFullName")
+                    row["Tên đơn vị (Tiếng Anh)"] = get_d("orgEnName")
+                    row["Mã định danh"] = org_code
+                    
+                    b_type = get_d("businessType")
+                    row["Tình hình pháp lý"] = business_type_map.get(b_type, b_type)
+                    
+                    row["Mã số thuế"] = get_d("taxCode")
+                    
+                    tax_date = detail_info.get("taxDate")
+                    row["Ngày cấp"] = fmt_timestamp(tax_date)
+                    
+                    # Tax nation: API 2 often has it, or API 1
+                    tax_nation = detail_info.get("taxNation") 
+                    if not tax_nation: tax_nation = item.get("taxNation")
+                    row["Quốc gia cấp"] = country_map.get(tax_nation, tax_nation)
+                    
+                    eff_date = item.get("effRoleDate")
+                    row["Ngày phê duyệt yêu cầu đăng ký"] = fmt_date_arr(eff_date)
+                    
+                    st = item.get("status")
+                    row["Trạng thái vai trò"] = "Đang hoạt động" if str(st) == "1" else str(st)
+                    
+                    ag_code = get_d("agencyName") 
+                    row["Tên cơ quan chủ quản"] = cqcq_map.get(ag_code, ag_code)
+                    
+                    row["Mã quan hệ ngân sách"] = get_d("budgetCode")
+                    
+                    off_pro = item.get("officePro") or detail_info.get("officePro")
+                    off_dis = item.get("officeDis") or detail_info.get("officeDis")
+                    
+                    row["Tỉnh/ thành phố"] = get_area_name(off_pro)
+                    row["Phường/ Xã/ Thị Trấn"] = get_area_name(off_dis)
+                    
+                    row["Số nhà, đường phố/ Xóm/ Ấp/ Thôn"] = item.get("officeAdd") or detail_info.get("officeAdd")
+                    
+                    # New columns requested: Phone and Email
+                    row["Số điện thoại"] = item.get("officePhone") or detail_info.get("officePhone")
+                    row["Email"] = item.get("recEmail") or detail_info.get("recEmail") or detail_info.get("email")
+
+                    row["Web"] = item.get("officeWeb") or detail_info.get("officeWeb")
+                    
+                    row["Họ và tên"] = get_d("repName")
+                    row["Chức vụ"] = detail_info.get("repPosition")
+                    
+                    all_rows.append(row)
+                    processed_org_codes.add(str(org_code))
+                    item_buffer.append(row)
+                    
+                    print(f"    Collected: {row['Tên đơn vị (đầy đủ)']}")
+                    
+                    # Save every 10 items
+                    if len(item_buffer) >= 10:
+                        df = pd.DataFrame(all_rows)
+                        try:
+                            df.to_excel(output_path, index=False)
+                            print(f"    Auto-saved {len(all_rows)} items to {output_path}")
+                            item_buffer = []
+                        except PermissionError:
+                             # Auto-backup logic
+                             # import time  <-- REMOVED to avoid shadowing
+                             ts = int(time.time())
+                             base, ext = os.path.splitext(output_path)
+                             # If already a backup, just keep using it or make new one? 
+                             # Simpler: Update output_path to a new name and retry ONCE
+                             if "_backup_" not in output_path:
+                                 new_path = f"{base}_backup_{ts}{ext}"
+                             else:
+                                 # Already a backup, maybe make another or overwrite?
+                                 # Let's make unique
+                                 new_path = f"{base}_{ts}{ext}"
+                             
+                             print(f"    WARNING: File {output_path} is open/locked. Switching to backup: {new_path}")
+                             output_path = new_path
+                             
+                             try:
+                                 df.to_excel(output_path, index=False)
+                                 print(f"    Auto-saved to backup {output_path}")
+                                 item_buffer = []
+                             except Exception as e2:
+                                 print(f"    Backup save failed: {e2}")
+
+                        except Exception as ex:
+                            print(f"    Save error: {ex}")
+            
+            except Exception as e:
+                print(f"  Page error: {e}")
+                
+            page_idx += 1
+            time.sleep(1)
+
+    # Final Save
+    if item_buffer or all_rows:
+        df = pd.DataFrame(all_rows)
+        try:
+            df.to_excel(output_path, index=False)
+            print(f"Final save completed. Total {len(all_rows)} items to {output_path}")
+        except PermissionError:
+             # Final save backup logic
+             # import time <-- REMOVED
+             ts = int(time.time())
+             base, ext = os.path.splitext(output_path)
+             if "_backup_" not in output_path:
+                 new_path = f"{base}_backup_{ts}{ext}"
+             else:
+                 new_path = f"{base}_{ts}{ext}"
+             
+             print(f"    WARNING: File {output_path} is open/locked. Saving final to backup: {new_path}")
+             try:
+                 df.to_excel(new_path, index=False)
+                 print(f"Final save completed to {new_path}")
+             except Exception as ex:
+                 print(f"Final save backup failed: {ex}")
+        except Exception as e:
+            print(f"Final save error: {e}")
+
 
 
 

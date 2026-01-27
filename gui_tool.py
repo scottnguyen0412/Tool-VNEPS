@@ -536,9 +536,18 @@ class ScraperApp(ctk.CTk):
                 else:
                     ministries_to_scrape = [start_ministry]
             else:
-                # ALL Mode
-                print("> Mode: ALL DATA (No Filter)")
-                ministries_to_scrape = [""] 
+                # ALL Mode - USE NEW API SCAN
+                print("> Mode: ALL DATA (API SCAN - New Logic)")
+                scrape_muasamcong.run_investor_scan_api(
+                     output_path=output_path,
+                     pause_event=self.pause_event,
+                     stop_event=self.stop_event
+                )
+                print("\n>>> COMPLETED SUCCESSFULLY!")
+                self.timer_running = False
+                self.status_label.configure(text="Status: Completed ✅")
+                messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
+                return 
             
             print("-" * 50)
             
