@@ -524,6 +524,7 @@ class ScraperApp(ctk.CTk):
             }
             
             # Determine list of ministries
+            # Determine list of ministries
             if start_ministry: # Filter Mode
                 if start_ministry in ministry_sequences:
                     if is_sequential:
@@ -535,54 +536,34 @@ class ScraperApp(ctk.CTk):
                         print(f"> Mode: SINGLE Ministry ({start_ministry})")
                 else:
                     ministries_to_scrape = [start_ministry]
+                
+                # --- MINISTRY MODE (API) ---
+                print(f"> Using API Scan for Ministries: {ministries_to_scrape}")
+                scrape_muasamcong.run_investor_scan_api(
+                     output_path=output_path,
+                     pause_event=self.pause_event,
+                     stop_event=self.stop_event,
+                     ministries=ministries_to_scrape
+                )
+
             else:
                 # ALL Mode - USE NEW API SCAN
                 print("> Mode: ALL DATA (API SCAN - New Logic)")
                 scrape_muasamcong.run_investor_scan_api(
                      output_path=output_path,
                      pause_event=self.pause_event,
-                     stop_event=self.stop_event
+                     stop_event=self.stop_event,
+                     ministries=None # All mode
                 )
-                print("\n>>> COMPLETED SUCCESSFULLY!")
-                self.timer_running = False
-                self.status_label.configure(text="Status: Completed ✅")
-                messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
-                return 
+                
+            print("\n>>> COMPLETED SUCCESSFULLY!")
+            self.timer_running = False
+            self.status_label.configure(text="Status: Completed ✅")
+            messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
+            return 
             
+            # (Old scraping loop removed here)
             print("-" * 50)
-            
-            # Main Loop
-            for m_idx, current_m in enumerate(ministries_to_scrape):
-                if current_m:
-                    print(f"\n[{m_idx+1}/{len(ministries_to_scrape)}] Processing Ministry: {current_m}")
-                
-                # Special Logic for Keywords
-                keywords_for_ministry = [""]
-                if current_m in ["Bộ Công an", "Bộ Quốc phòng"]:
-                    keywords_for_ministry = ["bệnh viện", "y tế"]
-                
-                for kw in keywords_for_ministry:
-                    if current_m:
-                        if kw:
-                             print(f"   > Filter: {current_m} | Keyword: '{kw}'")
-                        else:
-                             print(f"   > Filter: {current_m} (No extra keyword)")
-                    
-                    scrape_muasamcong.run(
-                        output_path=output_path, 
-                        max_pages=max_pages, 
-                        ministry_filter=current_m,
-                        search_keyword=kw,
-                        pause_event=self.pause_event,
-                        stop_event=self.stop_event
-                    )
-                    
-                    if kw != keywords_for_ministry[-1]:
-                        time.sleep(2)
-                
-                if m_idx < len(ministries_to_scrape) - 1:
-                    print(f"--- Finished {current_m}. Moving to next ministry in 3s... ---")
-                    time.sleep(3)
             
             print("\n>>> COMPLETED SUCCESSFULLY!")
             self.timer_running = False # Stop timer immediately

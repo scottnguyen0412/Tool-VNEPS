@@ -1648,12 +1648,15 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
 
     print(f"Completed! Data saved to {output_path}")
 
-def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None):
+def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, ministries=None):
     """
-    New API-based scanning for 'Toàn Bộ' tab (All Investors).
-    Target:
-      1. Keyword 'y tế'
-      2. Keyword 'bệnh viện'
+    New API-based scanning for Investors.
+    Modes:
+      1. 'Toàn Bộ' (All): ministries=None. Target: 'y tế', 'bệnh viện' (global).
+      2. 'Theo Bộ Ngành' (Ministry): ministries=[list of names]. 
+         - Logic: Look up code from CQCQ.
+         - For 'Bộ Công an', 'Bộ Quốc phòng': Target 'bệnh viện', 'y tế' with agencyName filter.
+         - For others: Target "" (all) with agencyName filter.
     """
     print("--- Starting API-based Investor Scan ---")
     
@@ -1801,8 +1804,41 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None):
 
     item_buffer = []
 
-    for kw in keywords:
-        print(f"Scanning keyword: '{kw}'")
+    # Prepare list of tasks: [(MinistryName, MinistryCode, Keyword)]
+    # If ministries=None (All Mode): [("All", None, "y tế"), ("All", None, "bệnh viện")]
+    
+    tasks = []
+    
+    if not ministries:
+        # All Mode
+        tasks.append(("All", None, "y tế"))
+        tasks.append(("All", None, "bệnh viện"))
+    else:
+        # Ministry Mode
+        # Build Name->Code map with validation
+        name_to_code = {}
+        for c, n in cqcq_map.items():
+            if n: 
+                # Normalize spaces? API usually exact match or contains.
+                # User input comes from GUI which likely matches JSON name exactly.
+                name_to_code[n] = c
+                
+        for m_name in ministries:
+            m_code = name_to_code.get(m_name)
+            if not m_code:
+                # Try simple fuzzy or stripped?
+                # For now assume exact match from GUI
+                print(f"Warning: Could not find code for '{m_name}'. Skipping.")
+                continue
+                
+            if m_name in ["Bộ Công an", "Bộ Quốc phòng"]:
+                tasks.append((m_name, m_code, "bệnh viện"))
+                tasks.append((m_name, m_code, "y tế"))
+            else:
+                tasks.append((m_name, m_code, "")) # Empty keyword for others
+
+    for m_name, m_code, kw in tasks:
+        print(f"Scanning Ministry: {m_name} | Code: {m_code} | Keyword: '{kw}'")
         page_idx = 0
         total_pages = 1 
         
@@ -1810,20 +1846,33 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None):
             check_status()
             
             url_1 = "https://muasamcong.mpi.gov.vn/o/egp-portal-investor-approved-v2/services/um/lookup-orgInfo"
+            
+            # Construct Payload
+            q_params = {
+                "roleType": {"equals": "CDT"},
+                "orgName": {"contains": None},
+                "orgCode": {"contains": None},
+                "agencyName": {"in": None}, # Default None
+                "effRoleDate": {
+                    "greaterThanOrEqual": None,
+                    "lessThanOrEqual": None
+                }
+            }
+            
+            # Set Keyword
+            if kw:
+                q_params["orgNameOrOrgCode"] = {"contains": kw}
+            else:
+                 q_params["orgNameOrOrgCode"] = {"contains": ""}
+                 
+            # Set Agency Code
+            if m_code:
+                q_params["agencyName"] = {"in": [m_code]}
+            
             payload_1 = {
                 "pageSize": 10,
                 "pageNumber": page_idx,
-                "queryParams": {
-                    "roleType": {"equals": "CDT"},
-                    "orgName": {"contains": None},
-                    "orgCode": {"contains": None},
-                    "orgNameOrOrgCode": {"contains": kw},
-                    "agencyName": {"in": None},
-                    "effRoleDate": {
-                        "greaterThanOrEqual": None,
-                        "lessThanOrEqual": None
-                    }
-                }
+                "queryParams": q_params
             }
             
             try:
@@ -1852,8 +1901,6 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None):
                 
                 if not items:
                     print("  No items found on this page.")
-                    # If empty but total_pages says we are within range? 
-                    # Sometimes scan ends early.
                     if page_idx >= total_pages - 1:
                         break
                     else:
@@ -1956,7 +2003,9 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None):
                     processed_org_codes.add(str(org_code))
                     item_buffer.append(row)
                     
-                    print(f"    Collected: {row['Tên đơn vị (đầy đủ)']}")
+                    # Simplified log with Ministry context if applicable
+                    log_prefix = f"[{m_name}] " if m_name != "All" else ""
+                    print(f"    {log_prefix}Collected: {row['Tên đơn vị (đầy đủ)']}")
                     
                     # Save every 10 items
                     if len(item_buffer) >= 10:
