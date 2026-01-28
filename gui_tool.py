@@ -25,9 +25,53 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.9.2"
+CURRENT_VERSION = "v1.9.5"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
+
+class AnimatedGradientBorderFrame(ctk.CTkFrame):
+    def __init__(self, master, border_width=3, animation_speed=20, colors=None, **kwargs):
+        super().__init__(master, **kwargs)
+        self.border_width = border_width
+        self.animation_speed = animation_speed
+        
+        if colors:
+            self.colors = colors
+        else:
+            # Default Rainbow (Red, Orange, Yellow, Green, Cyan, Blue, Purple)
+            self.colors = [
+                (255, 0, 0), (255, 127, 0), (255, 255, 0), 
+                (0, 255, 0), (0, 0, 255), (75, 0, 130), (148, 0, 211)
+            ]
+        self.current_idx = 0
+        self.t = 0.0 # Interpolation factor 0.0 to 1.0
+        
+        self.configure(fg_color=self._rgb_to_hex(self.colors[0]))
+        self.animate()
+
+    def _rgb_to_hex(self, rgb):
+        return '#{:02x}{:02x}{:02x}'.format(int(rgb[0]), int(rgb[1]), int(rgb[2]))
+
+    def animate(self):
+        c1 = self.colors[self.current_idx]
+        c2 = self.colors[(self.current_idx + 1) % len(self.colors)]
+        
+        # Interpolate
+        r = c1[0] + (c2[0] - c1[0]) * self.t
+        g = c1[1] + (c2[1] - c1[1]) * self.t
+        b = c1[2] + (c2[2] - c1[2]) * self.t
+        
+        color_hex = self._rgb_to_hex((r, g, b))
+        try:
+             self.configure(fg_color=color_hex)
+        except: pass # Handle window closed
+        
+        self.t += 0.02
+        if self.t >= 1.0:
+            self.t = 0.0
+            self.current_idx = (self.current_idx + 1) % len(self.colors)
+            
+        self.after(self.animation_speed, self.animate)
 
 class ScraperApp(ctk.CTk):
     def __init__(self):
@@ -83,7 +127,7 @@ class ScraperApp(ctk.CTk):
         self.header_text.pack(side="left", pady=10)
 
         self.header_label = ctk.CTkLabel(self.header_text, text="MUASAMCONG DATA SCRAPER", 
-                                       font=ctk.CTkFont(family="Segoe UI", size=20, weight="bold"))
+                                       font=ctk.CTkFont(family="Roboto", size=20, weight="bold"))
         self.header_label.pack(anchor="w")
         
         self.version_label = ctk.CTkLabel(self.header_text, text=f"{CURRENT_VERSION}", 
@@ -121,18 +165,19 @@ class ScraperApp(ctk.CTk):
         self.browse_btn.grid(row=0, column=2, padx=20, pady=20)
 
         # --- TABS for Filter ---
-        self.tab_view = ctk.CTkTabview(self.settings_card, height=160, command=self.on_tab_change)
+        # --- TABS for Filter ---
+        self.tab_view = ctk.CTkTabview(self.settings_card, height=180, command=self.on_tab_change) # Increased height
         self.tab_view.grid(row=1, column=0, columnspan=3, padx=20, pady=(0, 10), sticky="ew")
         
         # Increase size of Tab Buttons
-        self.tab_view._segmented_button.configure(font=ctk.CTkFont(size=15, weight="bold"), height=40)
+        self.tab_view._segmented_button.configure(font=ctk.CTkFont(family="Roboto", size=15, weight="bold"), height=40)
         
-        self.tab_all = self.tab_view.add("Toàn Bộ") # Tab 1
-        self.tab_filter = self.tab_view.add("Theo Bộ Ngành") # Tab 2
-        self.tab_contractor = self.tab_view.add("Kết Quả Đấu Thầu") # Tab 3
-        self.tab_drug = self.tab_view.add("Công bố giá thuốc") # Tab 4 (New)
+        self.tab_all = self.tab_view.add("Thông Tin Nhà Đầu Tư") # Merged Tab
+        # self.tab_filter Removed
+        self.tab_contractor = self.tab_view.add("Kết Quả Đấu Thầu") # Tab 2
+        self.tab_drug = self.tab_view.add("Công bố giá thuốc") # Tab 3
         
-        # --- Tab 3 Content (Contractor Results) ---
+        # --- Tab 2 Content (Contractor Results) ---
         self.contractor_frame = ctk.CTkFrame(self.tab_contractor, fg_color="transparent")
         self.contractor_frame.pack(fill="both", padx=10, pady=5)
         
@@ -165,7 +210,7 @@ class ScraperApp(ctk.CTk):
         ctk.CTkLabel(self.contractor_frame, text="* Tự động chọn Field: Hàng hóa, Search By: Thuốc/Dược liệu", 
                      text_color="gray", font=ctk.CTkFont(size=11)).pack(anchor="w")
         
-        # Tab 4 Content (Drug Price)
+        # Tab 3 Content (Drug Price)
         self.drug_frame = ctk.CTkFrame(self.tab_drug, fg_color="transparent")
         self.drug_frame.pack(fill="both", padx=10, pady=5)
         
@@ -178,24 +223,41 @@ class ScraperApp(ctk.CTk):
         ctk.CTkLabel(self.drug_frame, text="* Lưu ý: Quá trình sẽ chạy tuần tự từ trang đầu đến hết.", 
                      font=ctk.CTkFont(size=11, slant="italic"), text_color="#E67E22").pack(pady=10)
         
-        # Tab 1 Content
-        ctk.CTkLabel(self.tab_all, text="Chế độ này sẽ cào tất cả dữ liệu (Không lọc theo Bộ).", text_color="gray").pack(pady=20)
+        # Merged Tab Content (Investor Search)
+        # Styled Info Box with Animated Gradient Border
+        self.info_border = AnimatedGradientBorderFrame(self.tab_all, border_width=2, corner_radius=8)
+        self.info_border.pack(fill="x", padx=20, pady=(5, 5))
         
-        # Tab 2 Content
-        self.ministry_frame = ctk.CTkFrame(self.tab_filter, fg_color="transparent")
-        self.ministry_frame.pack(fill="x", padx=20, pady=10)
+        # Inner Frame (Animated Gradient Background - Contrast Safe)
+        # Using cool colors (Green/Blue/Purple) to keep White text readable
+        inner_colors = [(39, 174, 96), (41, 128, 185), (142, 68, 173), (44, 62, 80)]
+        self.info_inner = AnimatedGradientBorderFrame(self.info_border, colors=inner_colors, corner_radius=6)
+        self.info_inner.pack(padx=3, pady=3, fill="both") # Padding acts as border width
         
-        self.ministries_list = ["Bộ Y tế", "Bộ Quốc phòng", "Bộ Công an"]
+        # Label with White Text, Centered
+        self.lbl_investor_desc = ctk.CTkLabel(self.info_inner, text="", 
+                                            text_color="#FFFFFF", # White
+                                            font=ctk.CTkFont(family="Roboto", size=14, weight="bold"),
+                                            wraplength=1100, justify="center")
+        self.lbl_investor_desc.pack(padx=10, pady=5, anchor="center")
         
-        ctk.CTkLabel(self.ministry_frame, text="Chọn Bộ bắt đầu:", font=ctk.CTkFont(weight="bold")).pack(side="left")
+        self.ministry_frame = ctk.CTkFrame(self.tab_all, fg_color="transparent")
+        self.ministry_frame.pack(fill="x", padx=20, pady=5)
         
-        self.combo_ministry = ctk.CTkComboBox(self.ministry_frame, values=self.ministries_list, width=200, state="readonly")
+        self.ministries_list = ["Tất cả (Chạy toàn bộ)", "Bộ Y tế", "Bộ Quốc phòng", "Bộ Công an"]
+        
+        ctk.CTkLabel(self.ministry_frame, text="Bộ Ngành:", font=ctk.CTkFont(family="Roboto", weight="bold")).pack(side="left")
+        
+        self.combo_ministry = ctk.CTkComboBox(self.ministry_frame, values=self.ministries_list, 
+                                            width=220, state="readonly", command=self.update_mode_desc)
         self.combo_ministry.pack(side="left", padx=10)
-        self.combo_ministry.set("Bộ Y tế")
+        self.combo_ministry.set("Tất cả (Chạy toàn bộ)")
         
-        self.chk_sequential = ctk.CTkCheckBox(self.ministry_frame, text="Tuần tự các bộ tiếp theo")
+        self.chk_sequential = ctk.CTkCheckBox(self.ministry_frame, text="Chạy tuần tự tiếp theo", command=self.update_mode_desc)
         self.chk_sequential.pack(side="left", padx=20)
-        self.chk_sequential.select() # Default selected
+        
+        # Initial UI State
+        self.update_mode_desc()
 
         # Limit Input (Global)
         self.limit_frame = ctk.CTkFrame(self.settings_card, fg_color="transparent")
@@ -285,6 +347,29 @@ class ScraperApp(ctk.CTk):
         # Startup Tasks
         self.after(2000, self.check_for_updates_thread)
 
+    def update_mode_desc(self, _=None):
+        choice = self.combo_ministry.get()
+        is_seq = self.chk_sequential.get() == 1
+        
+        if "Tất cả" in choice:
+            txt = "CHẾ ĐỘ: Thu thập toàn bộ thông tin nhà đầu tư liên quan đến ngành Dược (Không giới hạn Bộ Ngành)"
+            self.chk_sequential.deselect()
+            self.chk_sequential.configure(state="disabled", text="Chạy tuần tự (Không khả dụng)", text_color="gray")
+        else:
+            self.chk_sequential.configure(state="normal", text="Chạy tuần tự các bộ tiếp theo", text_color="black")
+            
+            # Base text
+            if choice in ["Bộ Công an", "Bộ Quốc phòng"]:
+                txt = f"CHẾ ĐỘ: Thu thập toàn bộ thông tin nhà đầu tư thuộc {choice} có liên quan đến Ngành Dược"
+            else:
+                txt = f"CHẾ ĐỘ: Thu thập toàn bộ thông tin nhà đầu tư thuộc {choice}"
+            
+            # Sequential suffix
+            if is_seq:
+                txt += "\n➤ Lưu ý: Sau khi hoàn thành, hệ thống sẽ TỰ ĐỘNG quét tiếp các Bộ còn lại"
+                
+        self.lbl_investor_desc.configure(text=txt)
+
     def on_tab_change(self):
         current = self.tab_view.get()
         if current == "Kết Quả Đấu Thầu":
@@ -305,7 +390,6 @@ class ScraperApp(ctk.CTk):
                 if not curr_val or not os.path.exists(curr_val):
                     curr_val = os.getcwd()
                 
-                # Check if it's a directory
                 if os.path.isdir(curr_val):
                      new_val = os.path.join(curr_val, "investors_data_detailed.xlsx")
                      self.path_entry.delete(0, tk.END)
@@ -458,9 +542,12 @@ class ScraperApp(ctk.CTk):
         from_date = ""
         to_date = ""
         
-        if current_tab == "Theo Bộ Ngành":
-            start_ministry = self.combo_ministry.get()
-            is_sequential = True if self.chk_sequential.get() == 1 else False
+        if current_tab == "Thông Tin Nhà Đầu Tư":
+            val = self.combo_ministry.get()
+            if val and "Tất cả" not in val:
+                start_ministry = val
+                is_sequential = True if self.chk_sequential.get() == 1 else False
+            # Else start_ministry stays "" which means All Mode
         elif current_tab == "Kết Quả Đấu Thầu":
             mode = "CONTRACTOR"
             kw = self.entry_keywords.get()
@@ -645,7 +732,7 @@ class ScraperApp(ctk.CTk):
         self.limit_entry.insert(0, "0")
         
         # 3. Reset Tabs & Ministry
-        self.tab_view.set("Toàn Bộ") # Default tab (need to check name)
+        self.tab_view.set("Thông Tin Nhà Đầu Tư") # Default tab (need to check name)
         # Tab names are defined in init. 
         # Check logic: self.tab_all = self.tab_view.add("Toàn Bộ")
         # To switch tab, use tab name string.
