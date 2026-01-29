@@ -1108,25 +1108,37 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
 
         # Robust Resource Path Finder
         def get_data_path(filename):
-            # 1. Try bundled/script path (sys._MEIPASS or __file__)
-            if getattr(sys, 'frozen', False):
-                base_dir = sys._MEIPASS
-            else:
-                base_dir = os.path.dirname(os.path.abspath(__file__))
-                
-            path1 = os.path.join(base_dir, "DATA_SAMPLE", filename)
-            if os.path.exists(path1):
-                return path1
-                
-            # 2. Try external path (next to .exe)
-            if getattr(sys, 'frozen', False):
-                base_dir_exe = os.path.dirname(sys.executable)
-                path2 = os.path.join(base_dir_exe, "DATA_SAMPLE", filename)
-                if os.path.exists(path2):
-                    return path2
+            candidates = []
             
-            # Return path1 as default for error reporting
-            return path1
+            # 1. Bundled Path (PyInstaller)
+            if getattr(sys, 'frozen', False):
+                base_mei = sys._MEIPASS
+                candidates.append(os.path.join(base_mei, "DATA_SAMPLE", filename))
+                candidates.append(os.path.join(base_mei, filename)) # Check root of bundle
+            
+            # 2. Development / Script Path
+            else:
+                base_script = os.path.dirname(os.path.abspath(__file__))
+                candidates.append(os.path.join(base_script, "DATA_SAMPLE", filename))
+                candidates.append(os.path.join(base_script, filename))
+            
+            # 3. External Path (Next to Exe or Script)
+            if getattr(sys, 'frozen', False):
+                base_exe = os.path.dirname(sys.executable)
+                candidates.append(os.path.join(base_exe, "DATA_SAMPLE", filename))
+                candidates.append(os.path.join(base_exe, filename))
+            
+            # 4. Current Working Directory
+            candidates.append(os.path.join(os.getcwd(), "DATA_SAMPLE", filename))
+            candidates.append(os.path.join(os.getcwd(), filename))
+            
+            # Check all candidates
+            for path in candidates:
+                if os.path.exists(path):
+                    return path
+            
+            # Return first candidate as default for error msg
+            return candidates[0] if candidates else filename
 
         # Load Country
         c_path = get_data_path("Data-Country.json")
