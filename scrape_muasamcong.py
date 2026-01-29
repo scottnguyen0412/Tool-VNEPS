@@ -1,5 +1,6 @@
 import json
 import time
+import sys
 from datetime import datetime
 import random
 import pandas as pd
@@ -1104,12 +1105,31 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
     cqcq_map = {}
     
     try:
-        # Resolve paths relative to script or DATA_SAMPLE
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        data_sample_dir = os.path.join(base_dir, "DATA_SAMPLE")
-        
+
+        # Robust Resource Path Finder
+        def get_data_path(filename):
+            # 1. Try bundled/script path (sys._MEIPASS or __file__)
+            if getattr(sys, 'frozen', False):
+                base_dir = sys._MEIPASS
+            else:
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                
+            path1 = os.path.join(base_dir, "DATA_SAMPLE", filename)
+            if os.path.exists(path1):
+                return path1
+                
+            # 2. Try external path (next to .exe)
+            if getattr(sys, 'frozen', False):
+                base_dir_exe = os.path.dirname(sys.executable)
+                path2 = os.path.join(base_dir_exe, "DATA_SAMPLE", filename)
+                if os.path.exists(path2):
+                    return path2
+            
+            # Return path1 as default for error reporting
+            return path1
+
         # Load Country
-        c_path = os.path.join(data_sample_dir, "Data-Country.json")
+        c_path = get_data_path("Data-Country.json")
         if os.path.exists(c_path):
             with open(c_path, "r", encoding="utf-8") as f:
                 c_data = json.load(f)
@@ -1121,7 +1141,7 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
              print(f"Warning: {c_path} not found.")
 
         # Load CQCQ
-        q_path = os.path.join(data_sample_dir, "Data-CQCQ.json")
+        q_path = get_data_path("Data-CQCQ.json")
         if os.path.exists(q_path):
             with open(q_path, "r", encoding="utf-8") as f:
                 q_data = json.load(f)
