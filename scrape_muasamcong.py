@@ -822,6 +822,15 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
                      notify_no = root_dto.get("notifyNo")
                      lot_results = root_dto.get("lotResultDTO") or []
                      lot_items = root_dto.get("lotResultItems") or []
+                    #  Check if lot_items is empty
+                     if not lot_items:
+                         d_vers = root_dto.get("decisionVersions")
+                         if d_vers and isinstance(d_vers, list):
+                             for v in reversed(d_vers):
+                                 items = v.get("lotResultItems")
+                                 if items:
+                                     lot_items = items
+                                     break
                      
                      if not lot_results and not lot_items:
                          print(f"    -> [Info] No lot results or items.")
