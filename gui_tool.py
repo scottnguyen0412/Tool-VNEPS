@@ -25,7 +25,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v1.9.8"
+CURRENT_VERSION = "v2.0.0"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -456,6 +456,21 @@ class ScraperApp(ctk.CTk):
         # Handle Folder Logic for Contractor Tab
         current_tab = self.tab_view.get()
         if current_tab == "Kết Quả Đấu Thầu":
+             f_d = self.entry_from_date.get().strip()
+             t_d = self.entry_to_date.get().strip()  
+             import datetime
+             def check_date_strict(d):
+                 if not d: return True
+                 # Pre-check for strict slash
+                 if "-" in d or "." in d: return False
+                 try:
+                     datetime.datetime.strptime(d, "%d/%m/%Y")
+                     return True
+                 except: return False
+             
+             if not check_date_strict(f_d) or not check_date_strict(t_d):
+                 messagebox.showwarning("Sai định dạng ngày", "Vui lòng nhập ngày theo định dạng: dd/mm/yyyy\nVí dụ: 30/12/2025")
+                 return
              # User selected a folder (hopefully)
              # Even if they pointed to a file, let's try to assume directory or treat as is? 
              # The new 'browse' forces directory.
