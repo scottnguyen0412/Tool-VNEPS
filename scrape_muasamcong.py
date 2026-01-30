@@ -984,6 +984,27 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
     }
 
     all_data = []
+    existing_ids = set()
+
+    # Load existing data if file exists
+    if os.path.exists(output_path):
+        try:
+            print(f"Loading existing data from {output_path}...")
+            df_old = pd.read_excel(output_path)
+            
+            # Check for 'id' column
+            if "id" in df_old.columns:
+                existing_ids = set(df_old["id"].dropna().astype(str))
+                all_data = df_old.to_dict('records')
+            else:
+                 # Fallback: keep existing data but can't check duplicates by ID effectively
+                 # Just load it so we don't lose it.
+                 all_data = df_old.to_dict('records')
+                 
+            print(f"Loaded {len(all_data)} existing records. ({len(existing_ids)} unique IDs)")
+        except Exception as e:
+            print(f"Warning: could not read existing file: {e}")
+
     skip_count = 0
     # max_result_count: Có thể tùy chỉnh: 15, 20, 50,100 
     max_result_count = 100 
@@ -1002,16 +1023,25 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
 
     def format_date(iso_str):
         if not iso_str: return ""
+        s = str(iso_str)
         try:
-            # Example: 2026-01-14T14:18:08.64+07:00
-            # format day/month/year
-            dt = datetime.fromisoformat(iso_str)
-            return dt.strftime("%d/%m/%Y")
+            # 1. Handle ISO T split
+            if "T" in s:
+                s = s.split("T")[0]
+            
+            # 2. Handle YYYY-MM-DD
+            if "-" in s:
+                parts = s.split("-")
+                if len(parts) == 3:
+                     # YYYY-MM-DD
+                     return f"{parts[2]}/{parts[1]}/{parts[0]}"
+            
+            # 3. If already has /, check usage? 
+            # Assuming output needed is specific, but input could be anything.
+            # If input is already correct, return it.
+            return s
         except:
-            try:
-                return iso_str.split("T")[0]
-            except:
-                return iso_str
+            return s
 
     while True:
         # Check Thread Events
@@ -1049,7 +1079,15 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
                 break
                 
             # Process items
+            batch_new = 0
             for item in items:
+                item_id = item.get("id")
+                if not item_id: item_id = ""
+                
+                # Check duplicate
+                if str(item_id) in existing_ids:
+                    continue
+                
                 # Mapping
                 row = {
                     "Ngày Công bố": format_date(item.get("ngayTiepNhan")),
@@ -1063,12 +1101,15 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
                     "Giá Bán Buôn Dự Kiến (VNĐ) (VAT)": format_money(item.get("giaBanBuonDuKien")),
                     "Cơ sở SX": item.get("doanhNghiepSanXuat"),
                     "Nước Sản Xuất": item.get("nuocSanXuat"),
-                    "Đối tượng thực hiện công bố": item.get("donViKeKhai") 
+                    "Đối tượng thực hiện công bố": item.get("donViKeKhai"),
+                    "id": item_id
                 }
                 all_data.append(row)
+                existing_ids.add(str(item_id))
+                batch_new += 1
             
             processed_count += len(items)
-            print(f"  Fetched {len(items)} items. Total: {processed_count}/{total_count}")
+            print(f"  Fetched {len(items)} items. (New: {batch_new}) Total processed: {processed_count}/{total_count}")
             
             # Save every batch (or every few batches)
             try:
