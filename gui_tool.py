@@ -25,7 +25,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v2.0.0"
+CURRENT_VERSION = "v2.0.2"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -247,6 +247,18 @@ class ScraperApp(ctk.CTk):
         self.ministries_list = ["Tất cả (Chạy toàn bộ)", "Bộ Y tế", "Bộ Quốc phòng", "Bộ Công an"]
         
         ctk.CTkLabel(self.ministry_frame, text="Bộ Ngành:", font=ctk.CTkFont(family="Roboto", weight="bold")).pack(side="left")
+
+        # Investor Date Range
+        self.investor_date_frame = ctk.CTkFrame(self.tab_all, fg_color="transparent")
+        self.investor_date_frame.pack(fill="x", padx=20, pady=5)
+        
+        ctk.CTkLabel(self.investor_date_frame, text="Từ ngày (dd/mm/yyyy):").pack(side="left", padx=(0, 5))
+        self.entry_investor_from = ctk.CTkEntry(self.investor_date_frame, width=100)
+        self.entry_investor_from.pack(side="left", padx=(0, 10))
+        
+        ctk.CTkLabel(self.investor_date_frame, text="Đến ngày:").pack(side="left", padx=(0, 5))
+        self.entry_investor_to = ctk.CTkEntry(self.investor_date_frame, width=100)
+        self.entry_investor_to.pack(side="left")
         
         self.combo_ministry = ctk.CTkComboBox(self.ministry_frame, values=self.ministries_list, 
                                             width=220, state="readonly", command=self.update_mode_desc)
@@ -542,7 +554,9 @@ class ScraperApp(ctk.CTk):
             if val and "Tất cả" not in val:
                 start_ministry = val
                 is_sequential = True if self.chk_sequential.get() == 1 else False
-            # Else start_ministry stays "" which means All Mode
+            # Get dates for Investor
+            from_date = self.entry_investor_from.get().strip()
+            to_date = self.entry_investor_to.get().strip()
         if current_tab == "Kết Quả Đấu Thầu":
             mode = "CONTRACTOR"
             kw = self.entry_keywords.get()
@@ -623,7 +637,9 @@ class ScraperApp(ctk.CTk):
                      output_path=output_path,
                      pause_event=self.pause_event,
                      stop_event=self.stop_event,
-                     ministries=ministries_to_scrape
+                     ministries=ministries_to_scrape,
+                     from_date_str=from_date,
+                     to_date_str=to_date
                 )
 
             else:
@@ -633,7 +649,9 @@ class ScraperApp(ctk.CTk):
                      output_path=output_path,
                      pause_event=self.pause_event,
                      stop_event=self.stop_event,
-                     ministries=None # All mode
+                     ministries=None, # All mode
+                     from_date_str=from_date,
+                     to_date_str=to_date
                 )
                 
             print("\n>>> COMPLETED SUCCESSFULLY!")

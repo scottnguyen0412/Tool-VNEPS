@@ -1226,7 +1226,7 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
 
     print(f"Completed! Data saved to {output_path}")
 
-def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, ministries=None):
+def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, ministries=None, from_date_str="", to_date_str=""):
     """
     New API-based scanning for Investors.
     Modes:
@@ -1457,14 +1457,40 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
             url_1 = "https://muasamcong.mpi.gov.vn/o/egp-portal-investor-approved-v2/services/um/lookup-orgInfo"
             
             # Construct Payload
+            # Format Date Range
+            # from_date_str: dd/mm/yyyy -> 2025-10-30T00:00:00.000Z
+            date_gt = None
+            date_lt = None
+            
+            def convert_to_iso(d_str, is_end_of_day=False):
+                if not d_str: return None
+                try:
+                    # Parse dd/mm/yyyy using existing helper logic or simple split
+                    pts = d_str.split('/')
+                    if len(pts) == 3:
+                        # yyyy-mm-dd
+                         fmt_d = f"{pts[2]}-{pts[1]}-{pts[0]}"
+                         if is_end_of_day:
+                             return f"{fmt_d}T23:59:59.000Z"
+                         else:
+                             return f"{fmt_d}T00:00:00.000Z"
+                except:
+                    pass
+                return None
+            
+            if from_date_str:
+                date_gt = convert_to_iso(from_date_str, False)
+            if to_date_str:
+                date_lt = convert_to_iso(to_date_str, True)
+
             q_params = {
                 "roleType": {"equals": "CDT"},
                 "orgName": {"contains": None},
                 "orgCode": {"contains": None},
                 "agencyName": {"in": None}, # Default None
                 "effRoleDate": {
-                    "greaterThanOrEqual": None,
-                    "lessThanOrEqual": None
+                    "greaterThanOrEqual": date_gt,
+                    "lessThanOrEqual": date_lt
                 }
             }
             
