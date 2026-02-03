@@ -596,9 +596,11 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
                         "Chủ đầu tư": item.get("investorName", ""),
                         "Địa điểm": loc_str,
                         "Thời điểm đóng thầu": format_date_str(item.get("bidCloseDate", "")),
+                        "Thời điểm mở thầu": format_date_str(item.get("bidOpenDate", "")), # Added for Phase 2 Fallback
                         "Trạng thái": trang_thai,
-                        "id": item.get("id", ""), # Added for Detail Scraping
-                        "inputResultId": item.get("inputResultId", "") # Added for Phase 4
+                        "id": item.get("id", ""),
+                        "bidID": item.get("bidId", ""), 
+                        "inputResultId": item.get("inputResultId", "") 
                     }
                     batch_data.append(row)
                 except Exception as e:
@@ -634,56 +636,152 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
                  token = urllib.parse.parse_qs(parsed.query).get('token', [None])[0]
              except: pass
         
+        # Define New API Helper for Sheet 2
+        def fetch_bid_pack_detail(api_context, bid_id):
+            url = "https://muasamcong.mpi.gov.vn/api/unau/portal/ebid/bid-pack-info/get-detail"
+            headers = {
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+            }
+            payload = {"body": {"id": bid_id}}
+            try:
+                # Note: This is a different host/endpoint structure, usually doesn't need token if unau/portal?
+                # But headers usually needed.
+                resp = api_context.post(url, data=payload, headers=headers)
+                if resp.ok:
+                    return resp.json()
+            except Exception as e:
+                print(f"Error fetching bid-pack-info: {e}")
+            return None
+
         phase3_inputs = []
         if token and all_data:
             print(f"--- Starting Detail Scraping (Token: {token[:10]}...) ---")
             detail_output_path = output_path.replace(".xlsx", " Detail.xlsx")
             
-            detail_all = []
-            
-            # Use same context or create new logic
-            # Use api_context which is already set
+            detail_all = [] # Sheet 1
+            hsmtt_all = []  # Sheet 2
             
             total_d = len(all_data)
             print(f"Total items to detail: {total_d}")
             
             for idx, row in enumerate(all_data):
                 bid_id = row.get("id")
-                if not bid_id: continue
+                # Use bidID from Phase 1 if available? 
+                # User said: "use bidID from phase 1" for the new API.
+                # Phase 1 extraction: "bidID": item.get("bidId", "")
+                phase1_bid_id = row.get("bidID") 
+                
+                # Check which ID to use for which API?
+                # Existing fetch_bid_detail uses 'id' (bid_id here).
+                # New fetch_bid_pack_detail uses 'bidID' (phase1_bid_id).
+                # If phase1_bid_id is missing, maybe fallback to bid_id?
+                target_pack_id = phase1_bid_id if phase1_bid_id else bid_id
                 
                 check_status()
                 print(f"  Fetching detail {idx+1}/{total_d}: {row.get('Mã TBMT', bid_id)}")
                 
-                # Fetch
+                # --- SHEET 1: General Info ---
                 d_json = fetch_bid_detail(api_context, token, bid_id)
                 if d_json:
-                    # Parse
                     d_row = process_detail_data(d_json)
                     if d_row:
                         detail_all.append(d_row)
                     
-                    # Phase 3 Collection
                     try:
                         plan = d_json.get("bidpPlanDetail", {}) or {}
                         link_info_str = plan.get("linkNotifyInfo")
                         if link_info_str:
                              phase3_inputs.append(link_info_str)
                     except: pass
+                
+                # --- SHEET 2: Ho so moi thau ---
+                if target_pack_id:
+                    pack_json = fetch_bid_pack_detail(api_context, target_pack_id)
+                    if pack_json and "body" in pack_json:
+                        body = pack_json["body"]
+                        notif = body.get("bidNotification", {}) or {}
                         
-                # Auto-Save every 10 items
+                        # Formatting helpers
+                        def fmt_ts(iso):
+                            if not iso: return ""
+                            try:
+                                # 2026-01-15T15:05:00 -> dd/mm/yyyy HH:MM:SS
+                                # Simple string replace
+                                T_split = iso.split("T")
+                                date_part = T_split[0]
+                                time_part = T_split[1] if len(T_split) > 1 else ""
+                                y, m, d = date_part.split("-")
+                                return f"{d}/{m}/{y} {time_part.split('.')[0]}"
+                            except: return iso
+                        
+                        def fmt_num(v): 
+                             if v is None or v == "": return ""
+                             try: return "{:,.0f}".format(float(v)).replace(",", ".")
+                             except: return str(v)
+
+                        # Lot List Logic
+                        lots = notif.get("lotDTOList")
+                        if not lots:
+                            lots = body.get("detailLotList")
+                        
+                        if lots and isinstance(lots, list):
+                            for lot in lots:
+                                # Data Extraction Logic with multiple fallbacks
+                                # 1. Bid Name
+                                b_name = notif.get("bidName")
+                                if not b_name: b_name = body.get("bidName")
+                                if not b_name: b_name = row.get("Tên gói thầu", "")
+                                
+                                # 2. Dates
+                                d_open = notif.get("bidOpenDate")
+                                d_close = notif.get("bidCloseDate")
+                                
+                                if not d_close: d_close = row.get("Thời điểm đóng thầu", "")
+                                final_open = fmt_ts(d_open)
+                                final_close = fmt_ts(d_close) 
+                                if not final_close and row.get("Thời điểm đóng thầu"):
+                                     final_close = row.get("Thời điểm đóng thầu")
+                                if not final_open and row.get("Thời điểm mở thầu"):
+                                     final_open = row.get("Thời điểm mở thầu")
+
+                                r2 = {
+                                    "Mã TBMT": notif.get("notifyNo") if notif.get("notifyNo") else body.get("linkNotifyInfo", {}).get("notifyNo", row.get("Mã TBMT")),
+                                    "Tên gói thầu": b_name,
+                                    "Mã phần (Lô)": lot.get("lotNo"), 
+                                    "Mã Thuốc": lot.get("medicineCode"),
+                                    "Tên hoạt chất/ Tên thành phần thuốc": lot.get("lotName"),
+                                    "Nồng độ/ hàm lượng": lot.get("nongDo"),
+                                    "Đường dùng": lot.get("duongDung"),
+                                    "Dạng bào chế": lot.get("dangBaoChe"),
+                                    "Đơn vị tính": lot.get("uom"),
+                                    "Số lượng": fmt_num(lot.get("quantity")),
+                                    "Giá trị ước tính từng phần (VND)": fmt_num(lot.get("lotPrice")),
+                                    "Giá kế hoạch": fmt_num(lot.get("pricePlan")),
+                                    "Nhóm thuốc": lot.get("groupMedicine"),
+                                    "Thời điểm mở thầu": final_open,
+                                    "Thời điểm đóng thầu": final_close
+                                }
+                                hsmtt_all.append(r2)
+                
+                # Auto-Save (Dual Sheets)
                 if (idx + 1) % 10 == 0:
                     try:
-                        pd.DataFrame(detail_all).to_excel(detail_output_path, index=False)
+                        with pd.ExcelWriter(detail_output_path) as writer:
+                             pd.DataFrame(detail_all).to_excel(writer, sheet_name='Thông tin chung', index=False)
+                             pd.DataFrame(hsmtt_all).to_excel(writer, sheet_name='Hồ sơ mời thầu', index=False)
                         print(f"  [Auto-Save] Saved {len(detail_all)} details so far.")
                     except Exception as e:
                         print(f"  [Auto-Save Error] {e}")
 
-                time.sleep(0.5) # Gentle
+                time.sleep(0.5)
             
             # Final Save
-            if detail_all:
+            if detail_all or hsmtt_all:
                 try:
-                    pd.DataFrame(detail_all).to_excel(detail_output_path, index=False)
+                    with pd.ExcelWriter(detail_output_path) as writer:
+                         pd.DataFrame(detail_all).to_excel(writer, sheet_name='Thông tin chung', index=False)
+                         pd.DataFrame(hsmtt_all).to_excel(writer, sheet_name='Hồ sơ mời thầu', index=False)
                     print(f"Successfully saved details to: {detail_output_path}")
                 except Exception as e:
                     print(f"Error saving details: {e}")
