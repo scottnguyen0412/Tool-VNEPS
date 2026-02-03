@@ -198,7 +198,7 @@ def fetch_contractor_input_result(api_context, token, bid_id):
     return None
 
 
-def run_contractor_selection(output_path=None, max_pages=None, keywords="", exclude_words="", from_date="", to_date="", pause_event=None, stop_event=None):
+def run_contractor_selection(output_path=None, keywords="", exclude_words="", from_date="", to_date="", pause_event=None, stop_event=None):
     """
     Function to scrape Contractor Selection Results (Kết quả lựa chọn nhà thầu).
     Specific logic for:
@@ -214,8 +214,6 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
         output_path = "contractor_results.xlsx"
     if not output_path.endswith(".xlsx"):
         output_path += ".xlsx"
-    if max_pages is None:
-        max_pages = float('inf')
 
     # Default Keywords if empty (as per user request reference)
     default_keywords = "thuốc, generic, tân dược, biệt dược, bệnh viện, chữa bệnh, vật tư y tế, điều trị, bệnh nhân, thiết bị y tế, khám chữa bệnh, khám bệnh, chữa bệnh, dược liệu, dược"
@@ -617,11 +615,8 @@ def run_contractor_selection(output_path=None, max_pages=None, keywords="", excl
 
             total_fetched += len(items)
             
-            # Check Max Pages
-            if page_num >= max_pages:
-                print(f"Reached max pages limit ({max_pages}).")
-                break
-                
+
+            
             # Next Page
             page_num += 1
             time.sleep(1) # Gentle rate limit
@@ -1105,7 +1100,6 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
 
     skip_count = 0
     # max_result_count: Có thể tùy chỉnh: 15, 20, 50,100 
-    max_result_count = 100 
     total_count = None
     processed_count = 0
 
@@ -1216,7 +1210,7 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
                 print(f"  Save error: {e}")
 
             # Prepare next page
-            skip_count += max_result_count
+            skip_count += 100
             
             if skip_count >= total_count:
                 print("All items fetched.")

@@ -259,19 +259,7 @@ class ScraperApp(ctk.CTk):
         # Initial UI State
         self.update_mode_desc()
 
-        # Limit Input (Global)
-        self.limit_frame = ctk.CTkFrame(self.settings_card, fg_color="transparent")
-        self.limit_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=20, pady=(0, 20))
-        
-        self.lbl_limit = ctk.CTkLabel(self.limit_frame, text="Giới hạn trang:", font=ctk.CTkFont(weight="bold"))
-        self.lbl_limit.pack(side="left", padx=(0, 10))
-        
-        self.limit_entry = ctk.CTkEntry(self.limit_frame, width=100, height=30)
-        self.limit_entry.pack(side="left")
-        self.limit_entry.insert(0, "0")
-        
-        self.lbl_hint = ctk.CTkLabel(self.limit_frame, text="(0 = Scrape ALL)", text_color="gray")
-        self.lbl_hint.pack(side="left", padx=10)
+
 
         # --- Action Section (Button & Progress) ---
         self.action_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
@@ -447,7 +435,6 @@ class ScraperApp(ctk.CTk):
 
     def start_scraping(self):
         output_path = self.path_entry.get().strip()
-        limit_str = self.limit_entry.get().strip()
 
         if not output_path:
             messagebox.showerror("Error", "Please specify a save path!")
@@ -514,19 +501,12 @@ class ScraperApp(ctk.CTk):
                            except: pass
 
 
-        try:
-            max_pages = int(limit_str)
-            if max_pages <= 0:
-                max_pages = float('inf')
-        except ValueError:
-            messagebox.showerror("Error", "Page Limit must be an integer!")
-            return
+
 
         # UI Updates
         self.start_btn.configure(state="disabled", text="RUNNING...", fg_color="#5D6D7E")
         self.pause_btn.configure(state="normal", text="PAUSE ⏸", fg_color="#E67E22", text_color="white")
         self.path_entry.configure(state="disabled")
-        self.limit_entry.configure(state="disabled")
         self.status_label.configure(text="Status: Scraping in progress...", text_color="#E67E22")
         
         # Start Timer
@@ -563,7 +543,7 @@ class ScraperApp(ctk.CTk):
                 start_ministry = val
                 is_sequential = True if self.chk_sequential.get() == 1 else False
             # Else start_ministry stays "" which means All Mode
-        elif current_tab == "Kết Quả Đấu Thầu":
+        if current_tab == "Kết Quả Đấu Thầu":
             mode = "CONTRACTOR"
             kw = self.entry_keywords.get()
             exclude = self.entry_exclude.get()
@@ -577,21 +557,19 @@ class ScraperApp(ctk.CTk):
             mode = "DRUG_PRICE" 
 
         # Threading
-        t = threading.Thread(target=self.run_process, args=(output_path, max_pages, start_ministry, is_sequential, mode, kw, exclude, from_date, to_date))
+        t = threading.Thread(target=self.run_process, args=(output_path, start_ministry, is_sequential, mode, kw, exclude, from_date, to_date))
         t.daemon = True
         t.start()
     
-    def run_process(self, output_path, max_pages, start_ministry, is_sequential, mode="NORMAL", kw="", exclude="", from_date="", to_date=""):
+    def run_process(self, output_path, start_ministry, is_sequential, mode="NORMAL", kw="", exclude="", from_date="", to_date=""):
         start_time = time.time()
         try:
             print(">>> INITIALIZING SCRAPER...")
             print(f"> Target File: {output_path}")
-            print(f"> Page Limit:  {'Unlimited' if max_pages == float('inf') else max_pages}")
             
             if mode == "CONTRACTOR":
                 scrape_muasamcong.run_contractor_selection(
                     output_path=output_path,
-                    max_pages=max_pages,
                     keywords=kw,
                     exclude_words=exclude,
                     from_date=from_date,
@@ -697,7 +675,6 @@ class ScraperApp(ctk.CTk):
         self.pause_btn.configure(state="disabled", text="PAUSE ⏸", fg_color="#E67E22", text_color="white")
         self.pause_event.set() # Reset to True
         self.path_entry.configure(state="normal")
-        self.limit_entry.configure(state="normal")
         self.tab_view.configure(state="normal") # Enable tabs
         
         # Stop Progress
