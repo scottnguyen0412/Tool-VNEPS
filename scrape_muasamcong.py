@@ -1314,6 +1314,16 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
     if not output_path.endswith(".xlsx"):
         output_path += ".xlsx"
     
+    # Temp Directory Setup
+    try:
+        temp_dir = os.path.join(os.path.dirname(os.path.abspath(output_path)), "temp")
+        os.makedirs(temp_dir, exist_ok=True)
+    except:
+        temp_dir = os.path.dirname(output_path)
+
+    csv_name = os.path.basename(output_path).replace(".xlsx", ".csv")
+    csv_path = os.path.join(temp_dir, csv_name)
+    
     # 1. Load Mappings
     country_map = {}
     cqcq_map = {}
@@ -1461,15 +1471,25 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
     processed_org_codes = set()
     all_rows = []
     
-    if os.path.exists(output_path):
+    # Check Existing Data (CSV priority)
+    if os.path.exists(csv_path):
+        try:
+            print(f"Reading existing CSV: {csv_path}")
+            df_old = pd.read_csv(csv_path, dtype=str)
+            if "Mã định danh" in df_old.columns:
+                 processed_org_codes = set(df_old["Mã định danh"].dropna())
+            print(f"Loaded {len(df_old)} existing records from CSV.")
+        except Exception as e:
+            print(f"Warning reading CSV: {e}")
+    elif os.path.exists(output_path):
         try:
             print(f"Reading existing file: {output_path}")
             df_old = pd.read_excel(output_path)
             # Normalize column reading
             if "Mã định danh" in df_old.columns:
                 processed_org_codes = set(df_old["Mã định danh"].dropna().astype(str))
-                all_rows = df_old.to_dict('records')
-            print(f"Loaded {len(all_rows)} existing records.")
+                # all_rows = df_old.to_dict('records') # No longer load all into memory
+            print(f"Loaded existing records from Excel.")
         except Exception as e:
             print(f"Warning: could not read existing file: {e}")
     
@@ -1705,7 +1725,7 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
                     row["Họ và tên"] = get_d("repName")
                     row["Chức vụ"] = detail_info.get("repPosition")
                     
-                    all_rows.append(row)
+                    # all_rows.append(row) # Optimization: Don't keep all in memory
                     processed_org_codes.add(str(org_code))
                     item_buffer.append(row)
                     
@@ -1713,39 +1733,10 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
                     log_prefix = f"[{m_name}] " if m_name != "All" else ""
                     print(f"    {log_prefix}Collected: {row['Tên đơn vị (đầy đủ)']}")
                     
-                    # Save every 10 items
-                    if len(item_buffer) >= 10:
-                        df = pd.DataFrame(all_rows)
-                        try:
-                            df.to_excel(output_path, index=False)
-                            print(f"    Auto-saved {len(all_rows)} items to {output_path}")
-                            item_buffer = []
-                        except PermissionError:
-                             # Auto-backup logic
-                             # import time  <-- REMOVED to avoid shadowing
-                             ts = int(time.time())
-                             base, ext = os.path.splitext(output_path)
-                             # If already a backup, just keep using it or make new one? 
-                             # Simpler: Update output_path to a new name and retry ONCE
-                             if "_backup_" not in output_path:
-                                 new_path = f"{base}_backup_{ts}{ext}"
-                             else:
-                                 # Already a backup, maybe make another or overwrite?
-                                 # Let's make unique
-                                 new_path = f"{base}_{ts}{ext}"
-                             
-                             print(f"    WARNING: File {output_path} is open/locked. Switching to backup: {new_path}")
-                             output_path = new_path
-                             
-                             try:
-                                 df.to_excel(output_path, index=False)
-                                 print(f"    Auto-saved to backup {output_path}")
-                                 item_buffer = []
-                             except Exception as e2:
-                                 print(f"    Backup save failed: {e2}")
-
-                        except Exception as ex:
-                            print(f"    Save error: {ex}")
+                    # Save every 200 items
+                    if len(item_buffer) >= 200:
+                        save_batch_csv(item_buffer, csv_path)
+                        item_buffer = []
             
             except Exception as e:
                 print(f"  Page error: {e}")
@@ -1754,29 +1745,10 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
             time.sleep(1)
 
     # Final Save
-    if item_buffer or all_rows:
-        df = pd.DataFrame(all_rows)
-        try:
-            df.to_excel(output_path, index=False)
-            print(f"Final save completed. Total {len(all_rows)} items to {output_path}")
-        except PermissionError:
-             # Final save backup logic
-             # import time <-- REMOVED
-             ts = int(time.time())
-             base, ext = os.path.splitext(output_path)
-             if "_backup_" not in output_path:
-                 new_path = f"{base}_backup_{ts}{ext}"
-             else:
-                 new_path = f"{base}_{ts}{ext}"
-             
-             print(f"    WARNING: File {output_path} is open/locked. Saving final to backup: {new_path}")
-             try:
-                 df.to_excel(new_path, index=False)
-                 print(f"Final save completed to {new_path}")
-             except Exception as ex:
-                 print(f"Final save backup failed: {ex}")
-        except Exception as e:
-            print(f"Final save error: {e}")
+    save_batch_csv(item_buffer, csv_path)
+    if os.path.exists(csv_path):
+        target_sheet = "Thông Tin Nhà Đầu Tư"
+        finalize_excel({target_sheet: csv_path}, output_path)
 
 
 
