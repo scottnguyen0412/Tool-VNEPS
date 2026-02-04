@@ -73,9 +73,69 @@ class AnimatedGradientBorderFrame(ctk.CTkFrame):
             
         self.after(self.animation_speed, self.animate)
 
+class LoginWindow(ctk.CTkToplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Login")
+        self.geometry("350x260")
+        self.resizable(False, False)
+        
+        # Center Window
+        self.update_idletasks()
+        try:
+            s_w = self.winfo_screenwidth()
+            s_h = self.winfo_screenheight()
+            x = int((s_w - 350) / 2)
+            y = int((s_h - 260) / 2)
+            self.geometry(f"+{x}+{y}")
+        except: pass
+        
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.attributes("-topmost", True)
+        
+        # UI
+        ctk.CTkLabel(self, text="ĐĂNG NHẬP HỆ THỐNG", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=(30, 15))
+        
+        self.entry_user = ctk.CTkEntry(self, placeholder_text="Tên đăng nhập", width=220)
+        self.entry_user.pack(pady=5)
+        
+        self.entry_pass = ctk.CTkEntry(self, placeholder_text="Mật khẩu", show="*", width=220)
+        self.entry_pass.pack(pady=5)
+        self.entry_pass.bind("<Return>", self.login_event)
+        
+        self.btn_login = ctk.CTkButton(self, text="Đăng Nhập", width=220, command=self.check_login)
+        self.btn_login.pack(pady=20)
+        
+        # Guide
+        ctk.CTkLabel(self, text="(Mặc định: admin / admin123)", text_color="gray", font=ctk.CTkFont(size=10)).pack(pady=(0, 10))
+        
+        self.entry_user.focus()
+
+    def login_event(self, event):
+        self.check_login()
+
+    def check_login(self):
+        u = self.entry_user.get().strip()
+        p = self.entry_pass.get().strip()
+        
+        # Basic Auth
+        if u == "admin" and p == "admin123":
+            self.master.deiconify() # Show main window
+            self.destroy()
+        else:
+            messagebox.showerror("Lỗi", "Tên đăng nhập hoặc mật khẩu không đúng!")
+
+    def on_close(self):
+        self.master.destroy()
+        sys.exit()
+
 class ScraperApp(ctk.CTk):
     def __init__(self):
         super().__init__()
+        
+        # Login Logic
+        self.withdraw()
+        LoginWindow(self)
 
         # Window Configuration
         self.title(f"Tool Muasamcong Scrape Data ({CURRENT_VERSION})")

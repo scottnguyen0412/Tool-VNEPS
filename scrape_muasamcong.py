@@ -5,6 +5,7 @@ from datetime import datetime
 import random
 import pandas as pd
 import urllib.parse
+import re
 from playwright.sync_api import sync_playwright
 import os
 import requests
@@ -14,6 +15,57 @@ from urllib3.util.ssl_ import create_urllib3_context
 from urllib3.poolmanager import PoolManager
 
 os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
+
+
+# --- CSV Helpers for Performance ---
+def save_batch_csv(data, path):
+    if not data: return
+    df = pd.DataFrame(data)
+    # Check if header needed
+    header = not os.path.exists(path)
+    try:
+        df.to_csv(path, mode='a', header=header, index=False, encoding='utf-8-sig')
+    except Exception as e:
+        print(f"Error appending to CSV {path}: {e}")
+
+def finalize_excel(csv_mapping, output_path):
+    """
+    csv_mapping: { "SheetName": "path/to.csv" }
+    """
+    def clean_excel_data(x):
+        if isinstance(x, str):
+            # Remove control characters illegal in Excel (ASCII < 32 except 0x09, 0x0A, 0x0D)
+            return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', x)
+        return x
+
+    try:
+        with pd.ExcelWriter(output_path) as writer:
+            has_data = False
+            for sheet, csv_f in csv_mapping.items():
+                if os.path.exists(csv_f):
+                    try:
+                        df = pd.read_csv(csv_f)
+                        # Sanitize
+                        df = df.map(clean_excel_data) # Use .map for latest pandas, or applymap for older
+                        
+                        df.to_excel(writer, sheet_name=sheet, index=False)
+                        has_data = True
+                    except AttributeError:
+                         # Fallback for older pandas (applymap)
+                         df = df.applymap(clean_excel_data)
+                         df.to_excel(writer, sheet_name=sheet, index=False)
+                         has_data = True
+                    except Exception as ex:
+                        print(f"Error reading/writing CSV {csv_f}: {ex}")
+            
+            if not has_data:
+                print("No data found in CSVs to write to Excel.")
+                return
+
+        print(f"Converted CSVs to Excel: {output_path}")
+        # Optional: Delete CSVs? User didn't specify. Keeping them is safer for debug.
+    except Exception as e:
+        print(f"Error converting to Excel: {e}")
 
 def fetch_bid_detail(api_context, token, bid_id):
     url = f"https://muasamcong.mpi.gov.vn/o/egp-portal-contractor-selection-v2/services/lcnt_tbmt_ttc_ldt?token={token}"
@@ -234,16 +286,38 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
         print(f"Date Range: {from_date} - {to_date}")
 
     # 2. Check Existing Data
+    # 2. Check Existing Data
     processed_items = set()
     all_data = []
-    if os.path.exists(output_path):
+    
+    # Temp Directory Setup
+    try:
+        temp_dir = os.path.join(os.path.dirname(os.path.abspath(output_path)), "temp")
+        os.makedirs(temp_dir, exist_ok=True)
+    except:
+        temp_dir = os.path.dirname(output_path) # Fallback
+
+    csv_name = os.path.basename(output_path).replace(".xlsx", ".csv")
+    csv_path_p1 = os.path.join(temp_dir, csv_name)
+    
+    load_source = None
+    read_func = None
+    
+    if os.path.exists(csv_path_p1):
+        load_source = csv_path_p1
+        read_func = pd.read_csv
+    elif os.path.exists(output_path):
+        load_source = output_path
+        read_func = pd.read_excel
+        
+    if load_source:
         try:
-            df = pd.read_excel(output_path)
+            df = read_func(load_source)
             # Use 'Mã TBMT/Gói thầu' or check col "Số TBMT"
             check_col = "Số TBMT"
             if check_col not in df.columns:
                  # Try to find a unique column
-                 possible_cols = ["Mã KQLCNT", "Số TBMT", "Tên gói thầu"]
+                 possible_cols = ["Mã KQLCNT", "Số TBMT", "Tên gói thầu", "Mã TBMT"]
                  for c in possible_cols:
                      if c in df.columns:
                          check_col = c
@@ -252,7 +326,7 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
             if check_col in df.columns:
                 processed_items = set(df[check_col].dropna().astype(str).str.strip())
                 all_data = df.to_dict('records')
-            print(f"Loaded {len(processed_items)} existing items (Check col: {check_col}).")
+            print(f"Loaded {len(processed_items)} existing items from {load_source} (Check col: {check_col}).")
         except Exception as e:
             print(f"Warning: Could not read existing file: {e}")
 
@@ -452,7 +526,7 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
         # The payload is typically a List: [{"pageSize": 10, "pageNumber": 0, "query": [...]}]
         
         current_payload_obj = base_payload[0] if isinstance(base_payload, list) else base_payload
-        current_payload_obj["pageSize"] = 50
+        current_payload_obj["pageSize"] = 200
         
         page_num = 0
         total_fetched = 0
@@ -467,7 +541,7 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
             current_payload_obj["pageNumber"] = page_num
             final_payload = [current_payload_obj] if isinstance(base_payload, list) else current_payload_obj
             
-            print(f"--- Fetching API Page {page_num} (Size: 50) ---")
+            print(f"--- Fetching API Page {page_num} (Size: 200) ---")
             
             retry = 0
             response_json = None
@@ -607,21 +681,19 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
             # Save Batch
             if batch_data:
                 all_data.extend(batch_data)
-                try:
-                    pd.DataFrame(all_data).to_excel(output_path, index=False)
-                    print(f"  Saved {len(batch_data)} API items to {output_path}")
-                except Exception as e:
-                    print(f"  Save error: {e}")
+                save_batch_csv(batch_data, csv_path_p1)
+                print(f"  Saved {len(batch_data)} API items to CSV.")
 
             total_fetched += len(items)
-            
-
             
             # Next Page
             page_num += 1
             time.sleep(1) # Gentle rate limit
             
         print(f"Scraping completed. Total items: {total_fetched}")
+        
+        # Finalize Phase 1 Excel
+        finalize_excel({"Kết quả tìm kiếm": csv_path_p1}, output_path)
         
         # --- PHASE 2: Fetch Details ---
         token = None
@@ -653,9 +725,12 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
         if token and all_data:
             print(f"--- Starting Detail Scraping (Token: {token[:10]}...) ---")
             detail_output_path = output_path.replace(".xlsx", " Detail.xlsx")
+            d_name = os.path.basename(detail_output_path)
+            csv_d_s1 = os.path.join(temp_dir, d_name.replace(".xlsx", "_Sheet1.csv"))
+            csv_d_s2 = os.path.join(temp_dir, d_name.replace(".xlsx", "_Sheet2.csv"))
             
-            detail_all = [] # Sheet 1
-            hsmtt_all = []  # Sheet 2
+            detail_buffer = [] 
+            hsmtt_buffer = [] 
             
             total_d = len(all_data)
             print(f"Total items to detail: {total_d}")
@@ -681,7 +756,7 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                 if d_json:
                     d_row = process_detail_data(d_json)
                     if d_row:
-                        detail_all.append(d_row)
+                        detail_buffer.append(d_row)
                     
                     try:
                         plan = d_json.get("bidpPlanDetail", {}) or {}
@@ -741,7 +816,7 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                                      final_open = row.get("Thời điểm mở thầu")
 
                                 r2 = {
-                                    "Mã TBMT": notif.get("notifyNo") if notif.get("notifyNo") else body.get("linkNotifyInfo", {}).get("notifyNo", row.get("Mã TBMT")),
+                                    "Mã TBMT": notif.get("notifyNo") if notif.get("notifyNo") else (body.get("linkNotifyInfo") or {}).get("notifyNo", row.get("Mã TBMT")),
                                     "Tên gói thầu": b_name,
                                     "Mã phần (Lô)": lot.get("lotNo"), 
                                     "Mã Thuốc": lot.get("medicineCode"),
@@ -757,31 +832,25 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                                     "Thời điểm mở thầu": final_open,
                                     "Thời điểm đóng thầu": final_close
                                 }
-                                hsmtt_all.append(r2)
+                                hsmtt_buffer.append(r2)
                 
-                # Auto-Save (Dual Sheets)
-                if (idx + 1) % 10 == 0:
-                    try:
-                        with pd.ExcelWriter(detail_output_path) as writer:
-                             pd.DataFrame(detail_all).to_excel(writer, sheet_name='Thông tin chung', index=False)
-                             pd.DataFrame(hsmtt_all).to_excel(writer, sheet_name='Hồ sơ mời thầu', index=False)
-                        print(f"  [Auto-Save] Saved {len(detail_all)} details so far.")
-                    except Exception as e:
-                        print(f"  [Auto-Save Error] {e}")
-
-                time.sleep(0.5)
+                # Auto-Save (CSV)
+                if (idx + 1) % 200 == 0:
+                    save_batch_csv(detail_buffer, csv_d_s1)
+                    save_batch_csv(hsmtt_buffer, csv_d_s2)
+                    detail_buffer = []
+                    hsmtt_buffer = []
+                    print(f"  [Auto-Save CSV] Saved batch.")
             
-            # Final Save
-            if detail_all or hsmtt_all:
-                try:
-                    with pd.ExcelWriter(detail_output_path) as writer:
-                         pd.DataFrame(detail_all).to_excel(writer, sheet_name='Thông tin chung', index=False)
-                         pd.DataFrame(hsmtt_all).to_excel(writer, sheet_name='Hồ sơ mời thầu', index=False)
-                    print(f"Successfully saved details to: {detail_output_path}")
-                except Exception as e:
-                    print(f"Error saving details: {e}")
-            else:
-                print("No detailed data collected.")
+            # Flush Remaining
+            save_batch_csv(detail_buffer, csv_d_s1)
+            save_batch_csv(hsmtt_buffer, csv_d_s2)
+            
+            # Finalize Excel
+            finalize_excel(
+                {"Thông tin chung": csv_d_s1, "Hồ sơ mời thầu": csv_d_s2}, 
+                detail_output_path
+            )
         else:
             print("Skipping details: No token found or no data.")
 
@@ -793,9 +862,10 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
              # Save to same directory as output_path
              dir_name = os.path.dirname(output_path)
              phase3_output_path = os.path.join(dir_name, "Bien ban mo thau detail.xlsx")
+             p3_name = os.path.basename(phase3_output_path)
+             csv_p3 = os.path.join(temp_dir, p3_name.replace(".xlsx", ".csv"))
 
-             
-             phase3_data = []
+             phase3_buffer = []
              
              for i, info_str in enumerate(phase3_inputs):
                  check_status()
@@ -861,22 +931,19 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                               "Bảo đảm dự thầu cho các phần tham dự (VND)": fmt_val(linked_bid.get("bidGuarantee")),
                               "Hiệu lực của BĐDT": linked_bid.get("bidGuaranteeValidity")
                           }
-                          phase3_data.append(row)
+                          phase3_buffer.append(row)
                      
                      time.sleep(0.5)
+                     if len(phase3_buffer) >= 200:
+                        save_batch_csv(phase3_buffer, csv_p3)
+                        phase3_buffer = []
 
                  except Exception as e:
                      print(f"  Error Phase 3 item: {e}")
              
              # Save
-             if phase3_data:
-                 try:
-                     pd.DataFrame(phase3_data).to_excel(phase3_output_path, index=False)
-                     print(f"Successfully saved Phase 3 data to: {phase3_output_path}")
-                 except Exception as e:
-                     print(f"Error saving Phase 3 excel: {e}")
-             else:
-                 print("No data collected for Phase 3.")
+             save_batch_csv(phase3_buffer, csv_p3)
+             finalize_excel({"Sheet1": csv_p3}, phase3_output_path)
 
         # --- PHASE 4: Contractor Input Result (Danh Sach Nha Thau & Hang Hoa) ---
         if token and all_data:
@@ -885,8 +952,13 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
              nha_thau_path = os.path.join(dir_name, "Danh Sach Nha Thau.xlsx")
              hang_hoa_path = os.path.join(dir_name, "Danh Sach Hang Hoa.xlsx")
              
-             list_nha_thau = []
-             list_hang_hoa = []
+             nt_name = os.path.basename(nha_thau_path)
+             hh_name = os.path.basename(hang_hoa_path)
+             csv_nt = os.path.join(temp_dir, nt_name.replace(".xlsx", ".csv"))
+             csv_hh = os.path.join(temp_dir, hh_name.replace(".xlsx", ".csv"))
+             
+             nt_buffer = []
+             hh_buffer = []
              
              total_p4 = len(all_data)
              
@@ -985,7 +1057,7 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                                  "Thời gian thực hiện gói thầu": cntr.get("cperiodText"),
                                  "Thời gian thực hiện hợp đồng": cntr.get("bidExecutionTime")
                              }
-                             list_nha_thau.append(row_nt)
+                             nt_buffer.append(row_nt)
 
                      # 2. Process Danh Sach Hang Hoa
                      # Strategy: Iterate LotItems -> formValue
@@ -1024,28 +1096,27 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                                      "Nhà thầu trúng thầu": g.get("contractorName"),
                                      "Tiến độ cung cấp": g.get("tienDo")
                                  }
-                                 list_hang_hoa.append(row_hh)
+                                 hh_buffer.append(row_hh)
                          except: pass
 
                      time.sleep(0.3)
+                     if (i + 1) % 200 == 0:
+                        save_batch_csv(nt_buffer, csv_nt)
+                        save_batch_csv(hh_buffer, csv_hh)
+                        nt_buffer = []
+                        hh_buffer = []
                  
                  except Exception as e:
                      print(f"  Error Phase 4 {bid_id}: {e}")
              
              # Save Files
-             if list_nha_thau:
-                 try:
-                     pd.DataFrame(list_nha_thau).to_excel(nha_thau_path, index=False)
-                     print(f"Successfully saved: {nha_thau_path}")
-                 except Exception as e:
-                     print(f"Error saving Nha Thau: {e}")
+             save_batch_csv(nt_buffer, csv_nt)
+             save_batch_csv(hh_buffer, csv_hh)
              
-             if list_hang_hoa:
-                 try:
-                     pd.DataFrame(list_hang_hoa).to_excel(hang_hoa_path, index=False)
-                     print(f"Successfully saved: {hang_hoa_path}")
-                 except Exception as e:
-                     print(f"Error saving Hang Hoa: {e}")
+             if os.path.exists(csv_nt):
+                 finalize_excel({"Danh Sach Nha Thau": csv_nt}, nha_thau_path)
+             if os.path.exists(csv_hh):
+                 finalize_excel({"Danh Sach Hang Hoa": csv_hh}, hang_hoa_path)
 
         browser.close()
 
