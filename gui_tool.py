@@ -10,6 +10,7 @@ import urllib.request
 import subprocess
 import time
 import shutil
+import requests
 import scrape_muasamcong
 
 # Configuration
@@ -25,7 +26,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v2.0.3"
+CURRENT_VERSION = "v2.0.4"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -107,7 +108,9 @@ class LoginWindow(ctk.CTkToplevel):
         self.btn_login.pack(pady=20)
         
         # Guide
-        ctk.CTkLabel(self, text="(Mặc định: admin / admin123)", text_color="gray", font=ctk.CTkFont(size=10)).pack(pady=(0, 10))
+        # Guide
+        ctk.CTkLabel(self, text="Bạn đã có tài khoản? Nếu chưa hãy liên hệ IT Boston Pharma", 
+                     text_color="gray", font=ctk.CTkFont(size=10), wraplength=320).pack(pady=(0, 10))
         
         self.entry_user.focus()
 
@@ -118,12 +121,43 @@ class LoginWindow(ctk.CTkToplevel):
         u = self.entry_user.get().strip()
         p = self.entry_pass.get().strip()
         
-        # Basic Auth
-        if u == "admin" and p == "admin123":
-            self.master.deiconify() # Show main window
-            self.destroy()
-        else:
-            messagebox.showerror("Lỗi", "Tên đăng nhập hoặc mật khẩu không đúng!")
+        if not u or not p:
+            messagebox.showwarning("Input", "Please enter username and password", parent=self)
+            return
+
+        # API Auth
+        api_url = "https://dashboard-vneps.vercel.app/api/auth/login"
+        try:
+            # Attempt Login via API
+            resp = requests.post(api_url, json={"username": u, "password": p}, timeout=5)
+            
+            if resp.status_code == 200:
+                # Success
+                data = resp.json()
+                # Optional: Store token? self.master.token = data.get("token")
+                self.master.deiconify() 
+                self.destroy()
+                return
+            else:
+                # Login Failed
+                try: 
+                    msg = resp.json().get("detail") or resp.json().get("message") or "Login failed"
+                except: msg = "Invalid credentials"
+                messagebox.showerror("Login Failed", f"{msg}", parent=self)
+                return
+
+        except requests.exceptions.ConnectionError:
+            # Fallback for offline/admin mode
+            print("Auth Server unreachable. Checking local admin...")
+            if u == "admin" and p == "admin123":
+                 if messagebox.askyesno("Offline Mode", "Could not connect to Auth Server.\nContinue in local Admin mode?", parent=self):
+                     self.master.deiconify()
+                     self.destroy()
+                     return
+            
+            messagebox.showerror("Connection Error", "Could not connect to Authentication Server (localhost:3000).", parent=self)
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}", parent=self)
 
     def on_close(self):
         self.master.destroy()
