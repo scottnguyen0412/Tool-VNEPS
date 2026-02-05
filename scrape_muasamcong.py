@@ -1127,6 +1127,16 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
     if not output_path.endswith(".xlsx"):
         output_path += ".xlsx"
 
+    # Temp Directory Setup
+    try:
+        temp_dir = os.path.join(os.path.dirname(os.path.abspath(output_path)), "temp")
+        os.makedirs(temp_dir, exist_ok=True)
+    except:
+        temp_dir = os.path.dirname(output_path)
+
+    csv_name = os.path.basename(output_path).replace(".xlsx", ".csv")
+    csv_path = os.path.join(temp_dir, csv_name)
+
     print(f"--- Bắt đầu cào Công bố giá thuốc ---")
     print(f"File lưu: {output_path}")
 
@@ -1147,11 +1157,20 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
         "sorting": None
     }
 
-    all_data = []
+    all_data = [] # Deprecated, using items_buffer + existing_ids
     existing_ids = set()
 
-    # Load existing data if file exists
-    if os.path.exists(output_path):
+    # Load existing data if file exists (CSV first)
+    if os.path.exists(csv_path):
+        try:
+             print(f"Loading existing CSV: {csv_path}...")
+             df_old = pd.read_csv(csv_path, dtype=str)
+             if "id" in df_old.columns:
+                 existing_ids = set(df_old["id"].dropna())
+             print(f"Loaded {len(df_old)} existing records from CSV.")
+        except Exception as e:
+             print(f"Warning reading CSV: {e}")
+    elif os.path.exists(output_path):
         try:
             print(f"Loading existing data from {output_path}...")
             df_old = pd.read_excel(output_path)
@@ -1159,15 +1178,12 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
             # Check for 'id' column
             if "id" in df_old.columns:
                 existing_ids = set(df_old["id"].dropna().astype(str))
-                all_data = df_old.to_dict('records')
-            else:
-                 # Fallback: keep existing data but can't check duplicates by ID effectively
-                 # Just load it so we don't lose it.
-                 all_data = df_old.to_dict('records')
-                 
-            print(f"Loaded {len(all_data)} existing records. ({len(existing_ids)} unique IDs)")
+            
+            print(f"Loaded existing records from Excel.")
         except Exception as e:
             print(f"Warning: could not read existing file: {e}")
+            
+    item_buffer = []
 
     skip_count = 0
     # max_result_count: Có thể tùy chỉnh: 15, 20, 50,100 
@@ -1267,7 +1283,7 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
                     "Đối tượng thực hiện công bố": item.get("donViKeKhai"),
                     "id": item_id
                 }
-                all_data.append(row)
+                item_buffer.append(row)
                 existing_ids.add(str(item_id))
                 batch_new += 1
             
@@ -1275,10 +1291,10 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
             print(f"  Fetched {len(items)} items. (New: {batch_new}) Total processed: {processed_count}/{total_count}")
             
             # Save every batch (or every few batches)
-            try:
-                pd.DataFrame(all_data).to_excel(output_path, index=False)
-            except Exception as e:
-                print(f"  Save error: {e}")
+            # Save every 200 items (approx 2 batches)
+            if len(item_buffer) >= 200:
+                save_batch_csv(item_buffer, csv_path)
+                item_buffer = []
 
             # Prepare next page
             skip_count += 100
@@ -1295,6 +1311,9 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
             #retry if fail
             pass
 
+    save_batch_csv(item_buffer, csv_path)
+    if os.path.exists(csv_path):
+        finalize_excel({"CongBoGiaThuoc": csv_path}, output_path)
     print(f"Completed! Data saved to {output_path}")
 
 def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, ministries=None, from_date_str="", to_date_str=""):
