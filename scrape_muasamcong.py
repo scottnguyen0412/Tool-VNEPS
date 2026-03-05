@@ -87,16 +87,125 @@ def fetch_bid_detail(api_context, token, bid_id):
     except Exception as e:
         # print(f"Detail Fetch Error: {e}")
         return None
-    return None
+def fetch_online_reoffer_detail(api_context, bid_id):
+    url = "https://muasamcong.mpi.gov.vn/o/egp-portal-contractor-selection-v2/services/online-reoffer/detail"
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+        "Origin": "https://muasamcong.mpi.gov.vn",
+        "Referer": "https://muasamcong.mpi.gov.vn/",
+    }
+    payload = {"id": bid_id}
+    
+    try:
+        response = api_context.post(url, data=payload, headers=headers)
+        if response.ok:
+            return response.json()
+        return None
+    except Exception as e:
+        return None
+
+def fetch_wb_adb_detail(api_context, token, bid_id):
+    url = f"https://muasamcong.mpi.gov.vn/o/egp-portal-contractor-selection-v2/services/lcnt_tbmt_ttc_vk_adb?token={token}"
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+        "Origin": "https://muasamcong.mpi.gov.vn",
+        "Referer": "https://muasamcong.mpi.gov.vn/",
+    }
+    payload = {"id": bid_id}
+    
+    try:
+        response = api_context.post(url, data=payload, headers=headers)
+        if response.ok:
+            return response.json()
+        return None
+    except Exception as e:
+        return None
+
+def process_online_reoffer_detail(detail_json):
+    if not detail_json: return None
+    
+    m = detail_json
+    plan = detail_json.get("bidPlan", {}) or {}
+    bid_detail = detail_json.get("bidDetail", {}) or {}
+    
+    def get_date(iso):
+        if not iso: return ""
+        try:
+            return iso.split("T")[0]
+        except: return iso
+        
+    def get_datetime(iso):
+         if not iso: return ""
+         try:
+            return iso.replace("T", " ").split(".")[0]
+         except: return iso
+
+    def map_val(val, mapping):
+        s = str(val) if val is not None else ""
+        return mapping.get(s, s)
+        
+    def format_currency(val):
+        if val is None or val == "": return ""
+        try:
+            s = "{:,.0f}".format(float(val))
+            return s.replace(",", ".") + " VNĐ"
+        except: return str(val)
+
+    unit_map = {"D": "Ngày", "M": "Tháng", "Y": "Năm", "W": "Tuần", "Q": "Quý"}
+    def format_period(val, unit):
+        v = str(val) if val is not None else ""
+        u = unit_map.get(unit, unit) if unit else ""
+        return f"{v} {u}".strip()
+
+    is_multi = m.get("isMultiLot")
+    multi_lot_str = "Có" if str(is_multi) == "1" else "Không"
+
+    return {
+        "Mã TBMT": m.get("notifyNo") or m.get("reofferNo"),
+        "Ngày đăng tải": get_datetime(m.get("publicDate")),
+        "Mã KHLCNT": m.get("planNo"),
+        "Phân loại KHLCNT": map_val(m.get("planType"), {"TX": "Chi thường xuyên", "DT": "Đầu tư phát triển"}),
+        "Tên dự toán mua sắm": m.get("planName") or m.get("projectName"),
+        "Quy trình áp dụng": map_val(m.get("processApply"), {"LDT": "Luật Đấu thầu", "LDT2023": "Luật đấu thầu 2023"}),
+        "Tên gói thầu": m.get("bidName"),
+        "Chủ đầu tư": m.get("investorName"),
+        "Chi tiết nguồn vốn": bid_detail.get("capitalDetail"),
+        "Lĩnh vực": map_val(m.get("investField"), {"HH": "Hàng hóa", "XL": "Xây lắp", "PTV": "Phi tư vấn", "TV": "Tư vấn"}),
+        "Hình thức lựa chọn nhà đầu": map_val(m.get("bidForm"), {"DTRR": "Đấu thầu rộng rãi", "CHCT": "Chào hàng cạnh tranh", "CGTTRG": "Chào giá trực tuyến theo quy trình rút gọn"}),
+        "Loại hợp đồng": map_val(m.get("contractType"), {"DGCD": "Đơn giá cố định", "TRGO": "Trọn gói"}),
+        "Trong nước/ Quốc tế": "Trong nước" if str(m.get("isDomestic")) == "1" else "Quốc tế",
+        "Thời gian thực hiện gói thầu": format_period(bid_detail.get('cperiod'), bid_detail.get('cperiodUnit')),
+        "Gói thầu có nhiều phần/ lô": multi_lot_str,
+        "Số lượng phần (lô)": len(m.get("bidoListContractorReofferPassedDTOList", []) or []),
+        "Hình thức dự thầu": "Qua mạng" if str(m.get("isInternet")) == "1" else "Không qua mạng",
+        "Địa điểm phát hành e-HSMT": "",
+        "Địa điểm nhận e-HSDT": "",
+        "Địa điểm thực hiện gói thầu": "",
+        "Thời điểm đóng thầu": get_datetime(m.get("reofferCloseDate")),
+        "Thời điểm mở thầu": get_datetime(m.get("reofferOpenDate")),
+        "Hiệu lực hồ sơ dự thầu": format_period(m.get('bidValidityPeriod'), m.get('bidValidityPeriodUnit') or ""),
+        "Số tiền bảo đảm dự thầu": "",
+        "Hình thức đảm bảo dự thầu": "",
+        "Số quyêt định phê duyệt": plan.get("decisionNo"),
+        "Ngày phê duyệt": get_date(plan.get("decisionDate")),
+        "Cơ quan ban hành quyết định": plan.get("decisionAgency")
+    }
 
 def process_detail_data(detail_json):
     if not detail_json: return None
     
     # Root object helper
-    m = detail_json.get("bidoNotifyContractorM", {}) or {}
+    m = detail_json.get("bidoNotifyContractorM")
+    if not m:
+        m = detail_json.get("bidoNotifyContractorP", {}) or {}
+
     plan = detail_json.get("bidpPlanDetail", {}) or {}
     contractor = detail_json.get("bidInvContractorOfflineDTO", {}) or {}
     status_obj = detail_json.get("bidoBidStatus", {}) or {}
+    if not status_obj:
+        status_obj = detail_json.get("bidoBidStatusDTO", {}) or {}
     
     # Helpers
     def get_date(iso):
@@ -130,7 +239,10 @@ def process_detail_data(detail_json):
         return f"{v} {u}".strip()
 
     # Location
-    locs = detail_json.get("bidpBidLocationList", [])
+    locs = detail_json.get("bidpBidLocationList")
+    if not locs:
+        locs = detail_json.get("lsBidpBidLocationDTO", [])
+    
     loc_str = ""
     if locs:
         l_parts = []
@@ -162,16 +274,16 @@ def process_detail_data(detail_json):
         "Ngày đăng tải": get_datetime(m.get("publicDate")),
         "Mã KHLCNT": m.get("planNo"),
         "Phân loại KHLCNT": map_val(m.get("planType"), {"TX": "Chi thường xuyên", "DT": "Đầu tư phát triển"}),
-        "Tên dự toán mua sắm": m.get("planName") or m.get("projectName"),
-        "Quy trình áp dụng": map_val(m.get("processApply"), {"LDT": "Luật Đấu thầu", "LDT2023": "Luật đấu thầu 2023"}),
+        "Tên dự toán mua sắm": m.get("planName") or m.get("projectName") or m.get("pName"),
+        "Quy trình áp dụng": map_val(m.get("processApply"), {"LDT": "Luật Đấu thầu", "LDT2023": "Luật đấu thầu 2023", "KHAC": "Khác"}),
         "Tên gói thầu": m.get("bidName"),
         "Chủ đầu tư": m.get("investorName"),
-        "Chi tiết nguồn vốn": m.get("capitalDetail"),
+        "Chi tiết nguồn vốn": m.get("capitalDetail") or plan.get("capitalDetail"),
         "Lĩnh vực": map_val(m.get("investField"), {"HH": "Hàng hóa", "XL": "Xây lắp", "PTV": "Phi tư vấn", "TV": "Tư vấn"}),
-        "Hình thức lựa chọn nhà đầu": map_val(m.get("bidForm"), {"DTRR": "Đấu thầu rộng rãi", "CHCT": "Chào hàng cạnh tranh"}),
-        "Loại hợp đồng": map_val(m.get("contractType"), {"DGCD": "Đơn giá cố định", "TRGO": "Trọn gói"}),
+        "Hình thức lựa chọn nhà đầu": map_val(m.get("bidForm"), {"DTRR": "Đấu thầu rộng rãi", "CHCT": "Chào hàng cạnh tranh", "CGTTRG": "Chào giá trực tuyến theo quy trình rút gọn"}),
+        "Loại hợp đồng": map_val(m.get("contractType") or m.get("cType"), {"DGCD": "Đơn giá cố định", "TRGO": "Trọn gói"}),
         "Trong nước/ Quốc tế": "Trong nước" if str(m.get("isDomestic")) == "1" else "Quốc tế",
-        "Thời gian thực hiện gói thầu": format_period(m.get('contractPeriod'), m.get('contractPeriodUnit')),
+        "Thời gian thực hiện gói thầu": format_period(m.get('contractPeriod') or m.get('cPeriod') or plan.get('cperiod'), m.get('contractPeriodUnit') or m.get('cPeriodUnit') or plan.get('cperiodUnit')),
         "Gói thầu có nhiều phần/ lô": multi_lot_str,
         "Số lượng phần (lô)": len(lot_list) if lot_list else 0,
         "Hình thức dự thầu": "Qua mạng" if str(m.get("isInternet")) == "1" else "Không qua mạng",
@@ -181,8 +293,8 @@ def process_detail_data(detail_json):
         "Thời điểm đóng thầu": get_datetime(m.get("bidCloseDate")),
         "Thời điểm mở thầu": get_datetime(m.get("bidOpenDate")),
         "Hiệu lực hồ sơ dự thầu": format_period(m.get('bidValidityPeriod'), m.get('bidValidityPeriodUnit')),
-        "Số tiền bảo đảm dự thầu": format_currency(m.get("guaranteeValue")),
-        "Hình thức đảm bảo dự thầu": m.get("guaranteeForm"),
+        "Số tiền bảo đảm dự thầu": format_currency(m.get("guaranteeValue") or m.get("bidGuaranteeValue")),
+        "Hình thức đảm bảo dự thầu": m.get("guaranteeForm") or m.get("bidGuaranteeForm"),
         "Số quyêt định phê duyệt": contractor.get("decisionNo"),
         "Ngày phê duyệt": get_date(contractor.get("decisionDate")),
         "Cơ quan ban hành quyết định": contractor.get("decisionAgency")
@@ -250,7 +362,7 @@ def fetch_contractor_input_result(api_context, token, bid_id):
     return None
 
 
-def run_contractor_selection(output_path=None, keywords="", exclude_words="", from_date="", to_date="", pause_event=None, stop_event=None):
+def run_contractor_selection(output_path=None, keywords="", exclude_words="", from_date="", to_date="", ib_list="", pause_event=None, stop_event=None):
     """
     Function to scrape Contractor Selection Results (Kết quả lựa chọn nhà thầu).
     Specific logic for:
@@ -381,106 +493,120 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
             # Wait for form to load
             page.wait_for_selector('input[placeholder*="TBMT"]', timeout=30000)
 
-            # 1. Select "Tìm theo": "Thông báo mời thầu thuốc, dược liệu..."
-            # Click Dropdown
-            dropdown = page.locator('.ant-select-selection--single').first
-            dropdown.click()
-            time.sleep(1)
-            # Click Option
-            option = page.locator("li.ant-select-dropdown-menu-item").filter(has_text="Thông báo mời thầu thuốc, dược liệu")
-            if option.count() > 0:
-                option.first.click()
-                print("Selected Search By: Medicine")
-            else:
-                print("Warning: Could not find 'Medicine' search option.")
-            
-            time.sleep(1)
-
-            # 2. Select Field: "Hàng hóa"
-            # It's a checkbox with id="HH" usually, or find by label
-            hh_cb = page.locator('input#HH')
-            if hh_cb.count() > 0:
-                if not hh_cb.is_checked():
-                     hh_cb.click()
-            else:
-                # Try by text
-                page.locator("label").filter(has_text="Hàng hóa").click()
-            print("Selected Field: Goods")
-            
-            time.sleep(1)
-
-            # 3. Enter Keywords
-            # Input 1: Keywords
             key_input = page.locator('input[placeholder*="TBMT"]') 
-            key_input.fill(keywords)
 
-            # Input 2: Exclude
-            exclude_input = page.locator('input[placeholder*="Áp dụng cho tất cả"]') 
-            exclude_input.fill(exclude_words)
-            
-            # 4. Use Date Range if provided (Fix for Readonly)
-            if from_date or to_date:
-                print(f"Setting Date Range: {from_date} - {to_date}")
+            if ib_list:
+                # MODE: IB LIST
+                print("Mode: IB List. Filling form...")
+                # 1. "Tìm theo": "Thông báo mời thầu"
+                dropdown = page.locator('.ant-select-selection--single').first
+                dropdown.click()
+                time.sleep(1)
+                # "Thông báo mời thầu" is usually the first option or exact text match
+                opts = page.locator("li.ant-select-dropdown-menu-item")
+                for i in range(opts.count()):
+                    if opts.nth(i).inner_text().strip() == "Thông báo mời thầu":
+                        opts.nth(i).click()
+                        break
+                print("Selected Search By: Thông báo mời thầu")
+                time.sleep(1)
+
+                # 2. Enter Keywords = ib_list
+                key_input.fill(ib_list)
+
+                # 3. Match type: "Khớp từ hoặc một số từ (Phân biệt dấu)"
                 try:
-                    # Find inputs with placeholder 'dd/mm/yyyy'
-                    dates = page.locator('input[placeholder="dd/mm/yyyy"]')
-                    
-                    if dates.count() >= 2:
-                        # Start Date
-                        if from_date:
-                            start_inp = dates.nth(0)
-                            start_inp.click() # Focus
-                            time.sleep(0.5)
-                            # Use keyboard type instead of fill because element is readonly
-                            page.keyboard.type(from_date, delay=100)
-                            page.keyboard.press("Enter")
-                            time.sleep(0.5)
-                            
-                        # End Date
-                        if to_date:
-                            end_inp = dates.nth(1)
-                            end_inp.click() # Focus 
-                            time.sleep(0.5)
-                            page.keyboard.type(to_date, delay=100)
-                            page.keyboard.press("Enter")
-                            time.sleep(0.5)
+                    match_label = page.locator("label").filter(has_text="Khớp từ hoặc một số từ (Phân biệt dấu)")
+                    if match_label.count() > 0:
+                        match_label.click()
+                        print("Selected Match Type: 'Khớp từ hoặc một số từ (Phân biệt dấu)'")
                     else:
-                        print("Warning: Could not find date inputs with placeholder 'dd/mm/yyyy'.")
-
+                        page.locator('//label[contains(text(), "Khớp từ hoặc một số từ (Phân biệt dấu)")]').click()
                 except Exception as e:
-                    print(f"Error setting dates: {e}")
+                    try: page.locator('input[type="radio"]').nth(2).click()
+                    except: pass
 
-            # 5. Select Match Type: "Khớp từ hoặc một số từ" (Radio 3)
-            # Do this LAST to ensure it doesn't get reset by other changes
-            try:
-                # Find label containing text and click it
-                match_label = page.locator("label").filter(has_text="Khớp từ hoặc một số từ (Phân biệt dấu)")
-                if match_label.count() > 0:
-                    match_label.click()
-                    print("Selected Match Type: 'Khớp từ hoặc một số từ (Phân biệt dấu)'")
+            else:
+                # MODE: NORMAL FILTER
+                # 1. Select "Tìm theo": "Thông báo mời thầu thuốc, dược liệu..."
+                dropdown = page.locator('.ant-select-selection--single').first
+                dropdown.click()
+                time.sleep(1)
+                option = page.locator("li.ant-select-dropdown-menu-item").filter(has_text="Thông báo mời thầu thuốc, dược liệu")
+                if option.count() > 0:
+                    option.first.click()
+                    print("Selected Search By: Medicine")
                 else:
-                    # Retry with xpath specific to text
-                    print("Label not found with simple filter, trying xpath...")
-                    page.locator('//label[contains(text(), "Khớp từ hoặc một số từ (Phân biệt dấu)")]').click()
-            except Exception as e:
-                print(f"Error selecting match type: {e}. Trying index...")
-                try: page.locator('input[type="radio"]').nth(2).click()
-                except: pass
+                    print("Warning: Could not find 'Medicine' search option.")
+                
+                time.sleep(1)
 
-            # E. Click Search
+                # 2. Select Field: "Hàng hóa"
+                hh_cb = page.locator('input#HH')
+                if hh_cb.count() > 0:
+                    if not hh_cb.is_checked():
+                         hh_cb.click()
+                else:
+                    page.locator("label").filter(has_text="Hàng hóa").click()
+                print("Selected Field: Goods")
+                
+                time.sleep(1)
+
+                # 3. Enter Keywords
+                key_input.fill(keywords)
+
+                exclude_input = page.locator('input[placeholder*="Áp dụng cho tất cả"]') 
+                exclude_input.fill(exclude_words)
+                
+                # 4. Use Date Range if provided
+                if from_date or to_date:
+                    print(f"Setting Date Range: {from_date} - {to_date}")
+                    try:
+                        dates = page.locator('input[placeholder="dd/mm/yyyy"]')
+                        if dates.count() >= 2:
+                            if from_date:
+                                start_inp = dates.nth(0)
+                                start_inp.click()
+                                time.sleep(0.5)
+                                page.keyboard.type(from_date, delay=100)
+                                page.keyboard.press("Enter")
+                                time.sleep(0.5)
+                                
+                            if to_date:
+                                end_inp = dates.nth(1)
+                                end_inp.click() 
+                                time.sleep(0.5)
+                                page.keyboard.type(to_date, delay=100)
+                                page.keyboard.press("Enter")
+                                time.sleep(0.5)
+                        else:
+                            print("Warning: Could not find date inputs with placeholder 'dd/mm/yyyy'.")
+                    except Exception as e:
+                        print(f"Error setting dates: {e}")
+
+                # 5. Select Match Type
+                try:
+                    match_label = page.locator("label").filter(has_text="Khớp từ hoặc một số từ (Phân biệt dấu)")
+                    if match_label.count() > 0:
+                        match_label.click()
+                        print("Selected Match Type: 'Khớp từ hoặc một số từ (Phân biệt dấu)'")
+                    else:
+                        page.locator('//label[contains(text(), "Khớp từ hoặc một số từ (Phân biệt dấu)")]').click()
+                except Exception as e:
+                    try: page.locator('input[type="radio"]').nth(2).click()
+                    except: pass
 
             # E. Click Search
             print("Clicking Search...")
             search_btn = page.locator("button.content__footer__btn").filter(has_text="Tìm kiếm")
             search_btn.click()
             
-            # Wait for results
             print("Waiting for results...")
             time.sleep(3) # Initial wait
         except Exception as e:
-            print(f"Error setting up search (Form Fill): {e}")
-            browser.close()
-            return
+                print(f"Error setting up search (Form Fill): {e}")
+                browser.close()
+                return
             
         # 6. API Scraping Loop
         # We need to capture the API token and the base payload from the initial search
@@ -488,6 +614,7 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
         
         api_url = None
         base_payload = None
+        token = None
         
         try:
              # Wait for the specific API request
@@ -498,6 +625,10 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
              api_url = first_req.value.url
              base_payload = first_req.value.post_data_json
              print(f"Captured API URL: {api_url}")
+             try:
+                 token = api_url.split("token=")[1]
+             except:
+                 token = None
              
         except:
              # If we missed the event (because it happened too fast), try to search again or just look at last requests
@@ -508,6 +639,10 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                      pass
                  api_url = first_req.value.url
                  base_payload = first_req.value.post_data_json
+                 try:
+                     token = api_url.split("token=")[1]
+                 except:
+                     token = None
              except Exception as e:
                  print(f"Could not capture API: {e}")
                  browser.close()
@@ -636,6 +771,7 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                     st_code = item.get("status", "")
                     st_map = {
                         "01": "Chưa đóng thầu",
+                        "03": "Đã hủy thầu",
                         "OPEN_BID": "Đang xét thầu", 
                         "IS_PUBLISH": "Có nhà trúng thầu",
                         "CANCEL_BID": "Đã hủy thầu"
@@ -753,17 +889,36 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                 
                 # --- SHEET 1: General Info ---
                 d_json = fetch_bid_detail(api_context, token, bid_id)
-                if d_json:
+                d_row = None
+                
+                # Check for null case
+                if d_json and d_json.get("bidoNotifyContractorM") is None and d_json.get("statusDT") is None:
+                    print("  Fallback: using online-reoffer/detail...")
+                    d_json_fallback = fetch_online_reoffer_detail(api_context, bid_id)
+                    if d_json_fallback:
+                        d_row = process_online_reoffer_detail(d_json_fallback)
+                        d_json = d_json_fallback # use fallback as d_json for the next steps
+                    else:
+                        print("  Fallback (online-reoffer) failed (e.g. 500 error). Trying lcnt_tbmt_ttc_vk_adb...")
+                        d_json_wb = fetch_wb_adb_detail(api_context, token, bid_id)
+                        if d_json_wb:
+                             d_row = process_detail_data(d_json_wb)
+                             d_json = d_json_wb
+                else:
                     d_row = process_detail_data(d_json)
-                    if d_row:
-                        detail_buffer.append(d_row)
-                    
-                    try:
-                        plan = d_json.get("bidpPlanDetail", {}) or {}
-                        link_info_str = plan.get("linkNotifyInfo")
-                        if link_info_str:
-                             phase3_inputs.append(link_info_str)
-                    except: pass
+
+                if d_row:
+                    detail_buffer.append(d_row)
+                
+                try:
+                    plan = d_json.get("bidpPlanDetail", {}) or d_json.get("bidPlan", {}) or {}
+                    link_info_str = plan.get("linkNotifyInfo")
+                    if link_info_str:
+                         phase3_inputs.append(link_info_str)
+                    elif "reofferNo" in d_json:
+                         # Append anyway so Phase 3 can query lotOpenDetail
+                         phase3_inputs.append(json.dumps({"notifyNo": d_json.get("reofferNo"), "notifyId": bid_id}))
+                except: pass
                 
                 # --- SHEET 2: Ho so moi thau ---
                 if target_pack_id:
@@ -883,12 +1038,13 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                      # API 1
                      lot_details = fetch_lot_open_detail(api_context, token, notify_no, notify_id)
                      
+                     # Check if array is empty
+                     if not lot_details or (isinstance(lot_details, list) and len(lot_details) == 0):
+                         print("  lotOpenDetail empty, skipping Phase 3 record.")
+                         continue
+                     
                      # API 2
                      bid_opens = fetch_bid_open(api_context, token, notify_no, notify_id)
-                     
-                     if not lot_details: 
-                         # Try API 2 alone? Join requires API 1 usually.
-                         continue
 
                      # Process & Join
                      # API 1 list
@@ -1028,13 +1184,25 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                                               # Take first item for summary?
                                               first = fv_json[0]
                                               don_gia = first.get("donGia")
+                                              if not don_gia:
+                                                  don_gia = first.get("unitPrice")
                                               qty = first.get("quantity")
                                      except: pass
                              
                              # Mapping
-                             result_status = "Không trúng thầu"
-                             if don_gia: # Rule: If has price -> Won? Or "Nếu có Giá dự thầu" - user request
+                             bid_res_val = cntr.get("bidResult")
+                             if str(bid_res_val) == "1":
                                  result_status = "Trúng thầu"
+                             else:
+                                 result_status = "Không trúng thầu"
+                             
+                             reason_val = cntr.get("reason")
+                             
+                             gia_du_thau = cntr.get("lotOpenPrice")
+                             if not gia_du_thau:
+                                 gia_du_thau = cntr.get("lotPrice")
+                                 
+                             gia_trung_thau = cntr.get("lotFinalPrice") if str(bid_res_val) == "1" else ""
                              
                              # Formatting
                              def fmt(x):
@@ -1049,11 +1217,12 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                                  "Mã định danh": cntr.get("orgCode"),
                                  "Mã số thuế": cntr.get("taxCode"),
                                  "Tên nhà thầu": cntr.get("orgFullname"),
-                                 "Giá Dự thầu": fmt(cntr.get("lotPrice")),
+                                 "Giá Dự thầu": fmt(gia_du_thau),
                                  "Đơn giá trúng thầu (VND)": fmt(don_gia),
-                                 "Giá trúng thầu của từng phần đã bao gồm giảm giá (VND) (đã bao gồm các hạng mục của phần đó)": fmt(cntr.get("lotFinalPrice")),
+                                 "Giá trúng thầu của từng phần đã bao gồm giảm giá (VND) (đã bao gồm các hạng mục của phần đó)": fmt(gia_trung_thau),
                                  "Số lượng trúng thầu": fmt(qty),
                                  "Kết quả": result_status,
+                                 "Lý do không đáp ứng": reason_val,
                                  "Thời gian thực hiện gói thầu": cntr.get("cperiodText"),
                                  "Thời gian thực hiện hợp đồng": cntr.get("bidExecutionTime")
                              }
@@ -1068,15 +1237,36 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                              goods = json.loads(fv_str)
                              if not goods or not isinstance(goods, list): continue
                              
+                             it_lot_result_id = it.get("lotResultId")
+                             
                              for g in goods:
                                  def fmt(x):
                                      if x is None or x == "": return ""
                                      try: return "{:,.0f}".format(float(x)).replace(",", ".")
                                      except: return str(x)
 
+                                 lotNo_val = g.get("lotNo")
+                                 if not lotNo_val and it_lot_result_id:
+                                     for lr in lot_results:
+                                         if lr.get("id") == it_lot_result_id:
+                                             lotNo_val = lr.get("lotNo")
+                                             break
+
+                                 don_gia_val = g.get("donGia")
+                                 if not don_gia_val:
+                                     don_gia_val = g.get("unitPrice")
+                                     
+                                 xuat_xu_val = g.get("nuocSanXuat")
+                                 if not xuat_xu_val:
+                                     xuat_xu_val = g.get("origin")
+                                     
+                                 thanh_tien_val = g.get("subTotal")
+                                 if not thanh_tien_val:
+                                     thanh_tien_val = g.get("amount")
+
                                  row_hh = {
                                      "Mã TBMT": notify_no,
-                                     "Mã Phần/lô": g.get("lotNo"),
+                                     "Mã Phần/lô": lotNo_val,
                                      "Mã thuốc": g.get("medicineCode"),
                                      "Tên thuốc": g.get("name"),
                                      "Tên hoạt chất/ Tên thành phần của thuốc": g.get("tenHoatChat"),
@@ -1088,12 +1278,14 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                                      "Hạn dùng (Tuổi thọ)": g.get("hanDung"),
                                      "GĐKLH hoặc GPNK": g.get("gdklh"),
                                      "Cơ sở sản xuất": g.get("csSanXuat"),
-                                     "Xuất xứ": g.get("nuocSanXuat"),
+                                     "Xuất xứ": xuat_xu_val,
+                                     "Thông số kỹ thuật": g.get("feature"),
                                      "Đơn vị tính": g.get("uom"),
                                      "Số lượng": fmt(g.get("quantity")),
-                                     "Đơn giá trúng thầu (VND)": fmt(g.get("donGia")),
-                                     "Thành tiền": fmt(g.get("amount")),
-                                     "Nhà thầu trúng thầu": g.get("contractorName"),
+                                     "Khối lượng": fmt(g.get("qty")),
+                                     "Đơn giá trúng thầu (VND)": fmt(don_gia_val),
+                                     "Thành tiền": fmt(thanh_tien_val),
+                                     "Nhà thầu trúng thầu": g.get("contractorName") if g.get("contractorName") else it.get("contractorName"),
                                      "Tiến độ cung cấp": g.get("tienDo")
                                  }
                                  hh_buffer.append(row_hh)

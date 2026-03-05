@@ -275,34 +275,52 @@ class ScraperApp(ctk.CTk):
         self.contractor_frame = ctk.CTkFrame(self.tab_contractor, fg_color="transparent")
         self.contractor_frame.pack(fill="both", padx=10, pady=5)
         
-        # Keywords
-        ctk.CTkLabel(self.contractor_frame, text="Từ khóa (mặc định):").pack(anchor="w")
-        self.entry_keywords = ctk.CTkEntry(self.contractor_frame, height=30)
+        self.contractor_mode_seg = ctk.CTkSegmentedButton(self.contractor_frame, values=["Tìm theo bộ lọc", "Tìm theo danh sách IB (Excel/Nhập)"], command=self.on_contractor_mode_change)
+        self.contractor_mode_seg.pack(fill="x", pady=(0, 10))
+        
+        # --- Mode 1: Filter Frame ---
+        self.filter_frame = ctk.CTkFrame(self.contractor_frame, fg_color="transparent")
+        
+        ctk.CTkLabel(self.filter_frame, text="Từ khóa (mặc định):").pack(anchor="w")
+        self.entry_keywords = ctk.CTkEntry(self.filter_frame, height=30)
         self.entry_keywords.pack(fill="x", pady=(0, 5))
         self.entry_keywords.insert(0, "thuốc, generic, tân dược, biệt dược, bệnh viện, chữa bệnh, vật tư y tế, điều trị, bệnh nhân, thiết bị y tế, khám chữa bệnh, khám bệnh, chữa bệnh, dược liệu, dược")
         
-        # Exclude
-        ctk.CTkLabel(self.contractor_frame, text="Loại trừ:").pack(anchor="w")
-        self.entry_exclude = ctk.CTkEntry(self.contractor_frame, height=30)
+        ctk.CTkLabel(self.filter_frame, text="Loại trừ:").pack(anchor="w")
+        self.entry_exclude = ctk.CTkEntry(self.filter_frame, height=30)
         self.entry_exclude.pack(fill="x", pady=(0, 5))
         self.entry_exclude.insert(0, "linh kiện, xây dựng, cải tạo, lắp đặt, thi công")
 
-        # Date Range
-        self.date_frame = ctk.CTkFrame(self.contractor_frame, fg_color="transparent")
+        self.date_frame = ctk.CTkFrame(self.filter_frame, fg_color="transparent")
         self.date_frame.pack(fill="x", pady=5)
         
-        # From Date
         ctk.CTkLabel(self.date_frame, text="Từ ngày (dd/mm/yyyy):").pack(side="left", padx=(0, 5))
         self.entry_from_date = ctk.CTkEntry(self.date_frame, width=100)
         self.entry_from_date.pack(side="left", padx=(0, 10))
         
-        # To Date
         ctk.CTkLabel(self.date_frame, text="Đến ngày:").pack(side="left", padx=(0, 5))
         self.entry_to_date = ctk.CTkEntry(self.date_frame, width=100)
         self.entry_to_date.pack(side="left")
 
-        ctk.CTkLabel(self.contractor_frame, text="* Tự động chọn Field: Hàng hóa, Search By: Thuốc/Dược liệu", 
+        ctk.CTkLabel(self.filter_frame, text="* Tự động chọn Field: Hàng hóa, Search By: Thuốc/Dược liệu", 
                      text_color="gray", font=ctk.CTkFont(size=11)).pack(anchor="w")
+
+        # --- Mode 2: IB List Frame ---
+        self.ib_frame = ctk.CTkFrame(self.contractor_frame, fg_color="transparent")
+        
+        self.ib_action_frame = ctk.CTkFrame(self.ib_frame, fg_color="transparent")
+        self.ib_action_frame.pack(fill="x", pady=(0, 5))
+        ctk.CTkLabel(self.ib_action_frame, text="Nhập danh sách mã IB (ngăn cách bởi dấu phẩy):", font=ctk.CTkFont(weight="bold")).pack(side="left")
+        self.btn_upload_excel = ctk.CTkButton(self.ib_action_frame, text="Upload Excel (Cột IB)", width=150, height=28, command=self.upload_ib_excel, fg_color="#27AE60", hover_color="#1E8449")
+        self.btn_upload_excel.pack(side="right")
+
+        self.entry_ib_list = ctk.CTkTextbox(self.ib_frame, height=90, fg_color=("gray95", "#1E1E1E"))
+        self.entry_ib_list.pack(fill="x", pady=(0, 5))
+        ctk.CTkLabel(self.ib_frame, text="* Hỗ trợ tải lên file Excel có chứa cột mang tên 'IB' và lấy dữ liệu từng hàng.", 
+                     text_color="gray", font=ctk.CTkFont(size=11)).pack(anchor="w")
+
+        self.contractor_mode_seg.set("Tìm theo bộ lọc")
+        self.filter_frame.pack(fill="both", expand=True)
         
         # Tab 3 Content (Drug Price)
         self.drug_frame = ctk.CTkFrame(self.tab_drug, fg_color="transparent")
@@ -489,6 +507,47 @@ class ScraperApp(ctk.CTk):
                      self.path_entry.delete(0, tk.END)
                      self.path_entry.insert(0, new_val)
 
+    def on_contractor_mode_change(self, value):
+        if value == "Tìm theo bộ lọc":
+            self.ib_frame.pack_forget()
+            self.filter_frame.pack(fill="both", expand=True)
+        else:
+            self.filter_frame.pack_forget()
+            self.ib_frame.pack(fill="both", expand=True)
+
+    def upload_ib_excel(self):
+        import pandas as pd
+        from tkinter import filedialog, messagebox
+        file_path = filedialog.askopenfilename(title="Chọn file Excel", filetypes=[("Excel Files", "*.xlsx *.xls")])
+        if file_path:
+            try:
+                df = pd.read_excel(file_path)
+                if "IB" not in df.columns:
+                    messagebox.showerror("Lỗi", "File Excel không chứa cột 'IB'. Vui lòng kiểm tra lại!")
+                    return
+                # Extract non-null IB strings
+                ib_list = df["IB"].dropna().astype(str).str.strip().tolist()
+                ib_list = [ib for ib in ib_list if ib]
+                if not ib_list:
+                    messagebox.showwarning("Cảnh báo", "Cột 'IB' trống!")
+                    return
+                
+                # Append to current
+                ib_text = ", ".join(ib_list)
+                current_text = self.entry_ib_list.get("1.0", "end-1c").strip()
+                if current_text:
+                    if not current_text.endswith(","):
+                        current_text += ", "
+                    self.entry_ib_list.delete("1.0", "end")
+                    self.entry_ib_list.insert("1.0", current_text + ib_text)
+                else:
+                    self.entry_ib_list.delete("1.0", "end")
+                    self.entry_ib_list.insert("1.0", ib_text)
+                
+                messagebox.showinfo("Thành công", f"Đã nạp {len(ib_list)} mã IB từ file Excel.")
+            except Exception as e:
+                messagebox.showerror("Lỗi", f"Không thể đọc file Excel: {str(e)}")
+
     def browse_file(self):
         current_tab = self.tab_view.get()
         
@@ -549,21 +608,23 @@ class ScraperApp(ctk.CTk):
         # Handle Folder Logic for Contractor Tab
         current_tab = self.tab_view.get()
         if current_tab == "Kết Quả Đấu Thầu":
-             f_d = self.entry_from_date.get().strip()
-             t_d = self.entry_to_date.get().strip()  
-             import datetime
-             def check_date_strict(d):
-                 if not d: return True
-                 # Pre-check for strict slash
-                 if "-" in d or "." in d: return False
-                 try:
-                     datetime.datetime.strptime(d, "%d/%m/%Y")
-                     return True
-                 except: return False
-             
-             if not check_date_strict(f_d) or not check_date_strict(t_d):
-                 messagebox.showwarning("Sai định dạng ngày", "Vui lòng nhập ngày theo định dạng: dd/mm/yyyy\nVí dụ: 30/12/2025")
-                 return
+             if getattr(self, "contractor_mode_seg", None) and self.contractor_mode_seg.get() == "Tìm theo danh sách IB (Excel/Nhập)":
+                 pass
+             else:
+                 f_d = self.entry_from_date.get().strip()
+                 t_d = self.entry_to_date.get().strip()  
+                 import datetime
+                 def check_date_strict(d):
+                     if not d: return True
+                     if "-" in d or "." in d: return False
+                     try:
+                         datetime.datetime.strptime(d, "%d/%m/%Y")
+                         return True
+                     except: return False
+                 
+                 if not check_date_strict(f_d) or not check_date_strict(t_d):
+                     messagebox.showwarning("Sai định dạng ngày", "Vui lòng nhập ngày theo định dạng: dd/mm/yyyy\nVí dụ: 30/12/2025")
+                     return
              # User selected a folder (hopefully)
              # Even if they pointed to a file, let's try to assume directory or treat as is? 
              # The new 'browse' forces directory.
@@ -652,15 +713,25 @@ class ScraperApp(ctk.CTk):
             from_date = self.entry_investor_from.get().strip()
             to_date = self.entry_investor_to.get().strip()
         if current_tab == "Kết Quả Đấu Thầu":
-            mode = "CONTRACTOR"
-            kw = self.entry_keywords.get()
-            exclude = self.entry_exclude.get()
-            from_date = self.entry_from_date.get().strip()
-            to_date = self.entry_to_date.get().strip()
-            
-            # Handle placeholder text if user didn't change it (optional, but good UX)
-            if "..." in kw: kw = "" # Let backend handle default
-            if "..." in exclude: exclude = "" 
+            if getattr(self, "contractor_mode_seg", None) and self.contractor_mode_seg.get() == "Tìm theo danh sách IB (Excel/Nhập)":
+                mode = "CONTRACTOR_IB"
+                kw = self.entry_ib_list.get("1.0", "end-1c").strip()
+                exclude = ""
+                from_date = ""
+                to_date = ""
+                if not kw:
+                    messagebox.showerror("Lỗi", "Vui lòng nhập hoặc upload danh sách IB!")
+                    self.reset_ui()
+                    return
+            else:
+                mode = "CONTRACTOR"
+                kw = self.entry_keywords.get()
+                exclude = self.entry_exclude.get()
+                from_date = self.entry_from_date.get().strip()
+                to_date = self.entry_to_date.get().strip()
+                
+                if "..." in kw: kw = ""
+                if "..." in exclude: exclude = "" 
         elif current_tab == "Công bố giá thuốc":
             mode = "DRUG_PRICE" 
 
@@ -682,6 +753,18 @@ class ScraperApp(ctk.CTk):
                     exclude_words=exclude,
                     from_date=from_date,
                     to_date=to_date,
+                    pause_event=self.pause_event,
+                    stop_event=self.stop_event
+                )
+                print("\n>>> COMPLETED SUCCESSFULLY!")
+                self.timer_running = False
+                self.status_label.configure(text="Status: Completed ✅")
+                messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
+                return
+            elif mode == "CONTRACTOR_IB":
+                scrape_muasamcong.run_contractor_selection(
+                    output_path=output_path,
+                    ib_list=kw,
                     pause_event=self.pause_event,
                     stop_event=self.stop_event
                 )
