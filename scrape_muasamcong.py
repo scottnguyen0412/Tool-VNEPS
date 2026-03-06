@@ -1345,7 +1345,7 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
         "KichHoat": True,
         "skipCount": 0,
         # maxResultCount: Có thể tùy chỉnh: 15, 20, 50,100 
-        "maxResultCount": 100,
+        "maxResultCount": 50,
         "sorting": None
     }
 
@@ -1460,8 +1460,25 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
                     continue
                 
                 # Mapping
+                trang_thai_html = str(item.get("trangThaiCongBo") or "")
+                trang_thai_text = re.sub('<[^<]+>', '', trang_thai_html).strip()
+
+                so_cv = item.get("soCongVanKienNghiDieuChinhGia")
+                ngay_cv = item.get("ngayCongVanKienNghiDieuChinhGia")
+                
+                vb_kien_nghi = ""
+                if so_cv or ngay_cv:
+                    s1 = str(so_cv) if so_cv else ""
+                    s2 = format_date(ngay_cv) if ngay_cv else ""
+                    if s1 and s2:
+                        vb_kien_nghi = f"{s1} - {s2}"
+                    else:
+                        vb_kien_nghi = f"{s1}{s2}"
+
                 row = {
                     "Ngày Công bố": format_date(item.get("ngayTiepNhan")),
+                    "Trạng thái": trang_thai_text,
+                    "Văn Bản Kiến Nghị": vb_kien_nghi,
                     "Tên thuốc": item.get("tenThuoc"),
                     "Tên HC": item.get("hoatChat"),
                     "NĐ/HL": item.get("hamLuong"),
@@ -1489,7 +1506,7 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
                 item_buffer = []
 
             # Prepare next page
-            skip_count += 100
+            skip_count += 50
             
             if skip_count >= total_count:
                 print("All items fetched.")
