@@ -1807,111 +1807,126 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
         except:
             return s
 
-    while True:
-        # Check Thread Events
-        if stop_event and stop_event.is_set():
-            print(">>> STOPPED by user.")
-            break
-        if pause_event:
-            while not pause_event.is_set():
-                time.sleep(1)
-                if stop_event and stop_event.is_set():
-                    break
+    import concurrent.futures
+
+    # Cào TotalCount trước để tính toán lượng chia trang
+    try:
+        payload["skipCount"] = 0
+        r_init = requests.post(url, json=payload, headers=headers, timeout=30)
+        data_init = r_init.json()
+        result_init = data_init.get("result", {})
+        total_count = result_init.get("totalCount", 0)
+        print(f"Total items found: {total_count}")
+    except Exception as e:
+        print(f"Lỗi khởi tạo API lấy số lượng: {e}")
+        return
+
+    def fetch_page(skip):
+        if stop_event and stop_event.is_set(): return []
         
-        # Update payload
-        payload["skipCount"] = skip_count
+        page_payload = payload.copy()
+        page_payload["skipCount"] = skip
         
-        print(f"Fetching skipCount={skip_count}...")
+        retry = 0
+        while retry < 3:
+            try:
+                r = requests.post(url, json=page_payload, headers=headers, timeout=30)
+                if r.status_code == 200:
+                    return r.json().get("result", {}).get("items", [])
+                retry += 1
+                time.sleep(2)
+            except:
+                retry += 1
+                time.sleep(2)
+        return None # Return None strictly to indicate network failure
+
+    # Chia nhỏ request theo bước nhảy (maxResultCount = 50)
+    page_skips = list(range(0, total_count, payload["maxResultCount"]))
+    
+    # max_workers = 8 để tránh server block do gọi quá nhiều request cùng lúc dẫn đến Failed
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        future_to_skip = {executor.submit(fetch_page, s): s for s in page_skips}
         
-        try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=30)
-            if resp.status_code != 200:
-                print(f"Error: API returned status {resp.status_code}")
-                time.sleep(5)
-                continue
-            
-            data = resp.json()
-            result = data.get("result", {})
-            items = result.get("items", [])
-            
-            if total_count is None:
-                total_count = result.get("totalCount", 0)
-                print(f"Total items found: {total_count}")
-            
-            if not items:
-                print("No more items.")
+        while future_to_skip:
+            if stop_event and stop_event.is_set():
+                print(">>> STOPPED by user.")
+                # Hủy các task đang trờ
+                for f in future_to_skip: f.cancel()
                 break
                 
-            # Process items
-            batch_new = 0
-            for item in items:
-                item_id = item.get("id")
-                if not item_id: item_id = ""
-                
-                # Check duplicate
-                if str(item_id) in existing_ids:
-                    continue
-                
-                # Mapping
-                trang_thai_html = str(item.get("trangThaiCongBo") or "")
-                trang_thai_text = re.sub('<[^<]+>', '', trang_thai_html).strip()
-
-                so_cv = item.get("soCongVanKienNghiDieuChinhGia")
-                ngay_cv = item.get("ngayCongVanKienNghiDieuChinhGia")
-                
-                vb_kien_nghi = ""
-                if so_cv or ngay_cv:
-                    s1 = str(so_cv) if so_cv else ""
-                    s2 = format_date(ngay_cv) if ngay_cv else ""
-                    if s1 and s2:
-                        vb_kien_nghi = f"{s1} - {s2}"
-                    else:
-                        vb_kien_nghi = f"{s1}{s2}"
-
-                row = {
-                    "Ngày Công bố": format_date(item.get("ngayTiepNhan")),
-                    "Trạng thái": trang_thai_text,
-                    "Văn Bản Kiến Nghị": vb_kien_nghi,
-                    "Tên thuốc": item.get("tenThuoc"),
-                    "Tên HC": item.get("hoatChat"),
-                    "NĐ/HL": item.get("hamLuong"),
-                    "Số GPLH/GPNK": item.get("soDangKy"),
-                    "Dạng bào chế": item.get("dangBaoChe"),
-                    "Quy Cách Đóng gói": item.get("quyCachDongGoi"),
-                    "ĐVT": item.get("donViTinh"),
-                    "Giá Bán Buôn Dự Kiến (VNĐ) (VAT)": format_money(item.get("giaBanBuonDuKien")),
-                    "Cơ sở SX": item.get("doanhNghiepSanXuat"),
-                    "Nước Sản Xuất": item.get("nuocSanXuat"),
-                    "Đối tượng thực hiện công bố": item.get("donViKeKhai"),
-                    "id": item_id
-                }
-                item_buffer.append(row)
-                existing_ids.add(str(item_id))
-                batch_new += 1
+            if pause_event:
+                while not pause_event.is_set():
+                    time.sleep(1)
+                    if stop_event and stop_event.is_set(): break
             
-            processed_count += len(items)
-            print(f"  Fetched {len(items)} items. (New: {batch_new}) Total processed: {processed_count}/{total_count}")
+            done, not_done = concurrent.futures.wait(future_to_skip.keys(), timeout=1, return_when=concurrent.futures.FIRST_COMPLETED)
             
-            # Save every batch (or every few batches)
-            # Save every 200 items (approx 2 batches)
-            if len(item_buffer) >= 200:
-                save_batch_csv(item_buffer, csv_path)
-                item_buffer = []
+            for future in done:
+                skip = future_to_skip.pop(future)
+                try:
+                    items = future.result()
+                    if items is None:
+                        # Re-enqueue các skip bị fail sau 3 lần thử
+                        print(f"  [Skip: {skip}] Lỗi mạng ngầm. Đang đẩy lại vào hàng đợi để cào lại...")
+                        new_f = executor.submit(fetch_page, skip)
+                        future_to_skip[new_f] = skip
+                        continue
+                        
+                    if not items: continue # Page rỗng
+                    
+                    batch_new = 0
+                    for item in items:
+                        item_id = str(item.get("id", ""))
+                        if not item_id or item_id in existing_ids:
+                            continue
+                            
+                        trang_thai_html = str(item.get("trangThaiCongBo") or "")
+                        trang_thai_text = re.sub('<[^<]+>', '', trang_thai_html).strip()
 
-            # Prepare next page
-            skip_count += 50
-            
-            if skip_count >= total_count:
-                print("All items fetched.")
-                break
-                
-            time.sleep(1) # Polite delay
+                        so_cv = item.get("soCongVanKienNghiDieuChinhGia")
+                        ngay_cv = item.get("ngayCongVanKienNghiDieuChinhGia")
+                        
+                        vb_kien_nghi = ""
+                        if so_cv or ngay_cv:
+                            s1 = str(so_cv) if so_cv else ""
+                            s2 = format_date(ngay_cv) if ngay_cv else ""
+                            if s1 and s2:
+                                vb_kien_nghi = f"{s1} - {s2}"
+                            else:
+                                vb_kien_nghi = f"{s1}{s2}"
 
-        except Exception as e:
-            print(f"Request failed: {e}")
-            time.sleep(5)
-            #retry if fail
-            pass
+                        row = {
+                            "Ngày Công bố": format_date(item.get("ngayTiepNhan")),
+                            "Trạng thái": trang_thai_text,
+                            "Văn Bản Kiến Nghị": vb_kien_nghi,
+                            "Tên thuốc": item.get("tenThuoc"),
+                            "Tên HC": item.get("hoatChat"),
+                            "NĐ/HL": item.get("hamLuong"),
+                            "Số GPLH/GPNK": item.get("soDangKy"),
+                            "Dạng bào chế": item.get("dangBaoChe"),
+                            "Quy Cách Đóng gói": item.get("quyCachDongGoi"),
+                            "ĐVT": item.get("donViTinh"),
+                            "Giá Bán Buôn Dự Kiến (VNĐ) (VAT)": format_money(item.get("giaBanBuonDuKien")),
+                            "Cơ sở SX": item.get("doanhNghiepSanXuat"),
+                            "Nước Sản Xuất": item.get("nuocSanXuat"),
+                            "Đối tượng thực hiện công bố": item.get("donViKeKhai"),
+                            "id": item_id
+                        }
+                        item_buffer.append(row)
+                        existing_ids.add(item_id)
+                        batch_new += 1
+                    
+                    processed_count += len(items)
+                    print(f"  [Skip: {skip}] Fetched {len(items)} items. (New: {batch_new}) Total processed: {processed_count}/{total_count}")
+                    
+                    if len(item_buffer) >= 200:
+                        save_batch_csv(item_buffer, csv_path)
+                        item_buffer = []
+                        
+                except Exception as e:
+                    print(f"Lỗi hệ thống khi phân tích skip {skip}: {e}")
+                    new_f = executor.submit(fetch_page, skip)
+                    future_to_skip[new_f] = skip
 
     save_batch_csv(item_buffer, csv_path)
     if os.path.exists(csv_path):
