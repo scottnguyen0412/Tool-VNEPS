@@ -269,6 +269,7 @@ class ScraperApp(ctk.CTk):
         self.tab_all = self.tab_view.add("Thông Tin Nhà Đầu Tư") # Merged Tab
         # self.tab_filter Removed
         self.tab_contractor = self.tab_view.add("Kết Quả Đấu Thầu") # Tab 2
+        self.tab_rfq = self.tab_view.add("Yêu cầu báo giá") # Tab 4
         self.tab_drug = self.tab_view.add("Công bố giá thuốc") # Tab 3
         
         # --- Tab 2 Content (Contractor Results) ---
@@ -334,6 +335,18 @@ class ScraperApp(ctk.CTk):
                      
         ctk.CTkLabel(self.drug_frame, text="* Lưu ý: Quá trình sẽ chạy tuần tự từ trang đầu đến hết.", 
                      font=ctk.CTkFont(size=11, slant="italic"), text_color="#E67E22").pack(pady=10)
+        
+        # Tab 4 Content (RFQ)
+        self.rfq_frame = ctk.CTkFrame(self.tab_rfq, fg_color="transparent")
+        self.rfq_frame.pack(fill="both", padx=10, pady=5)
+        
+        ctk.CTkLabel(self.rfq_frame, text="Nhập mã/ tên yêu cầu báo giá (hoặc các từ khóa):").pack(anchor="w")
+        self.entry_rfq_keywords = ctk.CTkEntry(self.rfq_frame, height=30)
+        self.entry_rfq_keywords.pack(fill="x", pady=(0, 10))
+        self.entry_rfq_keywords.insert(0, "thuốc, generic, genegic")
+        
+        ctk.CTkLabel(self.rfq_frame, text="Hệ thống sẽ tự động chọn:\n- Tìm Theo: Yêu Cầu Báo Giá\n- Từ khóa: Khớp từ hoặc một số từ (Phân biệt dấu)", 
+                     text_color="gray", font=ctk.CTkFont(size=11), justify="left").pack(anchor="w")
         
         # Merged Tab Content (Investor Search)
         # Styled Info Box with Animated Gradient Border
@@ -484,7 +497,7 @@ class ScraperApp(ctk.CTk):
 
     def on_tab_change(self):
         current = self.tab_view.get()
-        if current == "Kết Quả Đấu Thầu":
+        if current in ["Kết Quả Đấu Thầu", "Yêu cầu báo giá"]:
             self.lbl_path.configure(text="Folder Save Path:")
             # Remove filename if present (User request: No initialFile)
             curr_val = self.path_entry.get()
@@ -551,8 +564,8 @@ class ScraperApp(ctk.CTk):
     def browse_file(self):
         current_tab = self.tab_view.get()
         
-        if current_tab == "Kết Quả Đấu Thầu":
-            # For Contractor mode, we select a FOLDER
+        if current_tab in ["Kết Quả Đấu Thầu", "Yêu cầu báo giá"]:
+            # For Contractor and RFQ mode, we select a FOLDER
             folder_selected = filedialog.askdirectory(title="Select Folder to Save Data")
             if folder_selected:
                 self.path_entry.delete(0, tk.END)
@@ -605,66 +618,53 @@ class ScraperApp(ctk.CTk):
             messagebox.showerror("Error", "Please specify a save path!")
             return
 
-        # Handle Folder Logic for Contractor Tab
+        # Handle Folder Logic for Contractor Tab and RFQ Tab
         current_tab = self.tab_view.get()
-        if current_tab == "Kết Quả Đấu Thầu":
-             if getattr(self, "contractor_mode_seg", None) and self.contractor_mode_seg.get() == "Tìm theo danh sách IB (Excel/Nhập)":
-                 pass
-             else:
-                 f_d = self.entry_from_date.get().strip()
-                 t_d = self.entry_to_date.get().strip()  
-                 import datetime
-                 def check_date_strict(d):
-                     if not d: return True
-                     if "-" in d or "." in d: return False
-                     try:
-                         datetime.datetime.strptime(d, "%d/%m/%Y")
-                         return True
-                     except: return False
-                 
-                 if not check_date_strict(f_d) or not check_date_strict(t_d):
-                     messagebox.showwarning("Sai định dạng ngày", "Vui lòng nhập ngày theo định dạng: dd/mm/yyyy\nVí dụ: 30/12/2025")
-                     return
-             # User selected a folder (hopefully)
-             # Even if they pointed to a file, let's try to assume directory or treat as is? 
-             # The new 'browse' forces directory.
-             
-             # Check if path exists or create it
-             # Wait, if user pasted a path.
-             pass
-             
-             # Create Subfolder: Ket Qua Dau Thau dd_mm_yyyy HH_MM_SS
-             # If output_path is a directory:
-             if os.path.isdir(output_path):
-                 import datetime
-                 now_str = datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")
+        if current_tab in ["Kết Quả Đấu Thầu", "Yêu cầu báo giá"]:
+             if current_tab == "Kết Quả Đấu Thầu":
+                 if getattr(self, "contractor_mode_seg", None) and self.contractor_mode_seg.get() == "Tìm theo danh sách IB (Excel/Nhập)":
+                     pass
+                 else:
+                     f_d = self.entry_from_date.get().strip()
+                     t_d = self.entry_to_date.get().strip()  
+                     import datetime
+                     def check_date_strict(d):
+                         if not d: return True
+                         if "-" in d or "." in d: return False
+                         try:
+                             datetime.datetime.strptime(d, "%d/%m/%Y")
+                             return True
+                         except: return False
+                     
+                     if not check_date_strict(f_d) or not check_date_strict(t_d):
+                         messagebox.showwarning("Sai định dạng ngày", "Vui lòng nhập ngày theo định dạng: dd/mm/yyyy\nVí dụ: 30/12/2025")
+                         return
+
+             import datetime
+             now_str = datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")
+             if current_tab == "Kết Quả Đấu Thầu":
                  folder_name = f"Ket Qua Dau Thau {now_str}"
-                 full_folder_path = os.path.join(output_path, folder_name)
+                 file_name = "Danh Sach Thong Bao Moi Thau.xlsx"
+             else:
+                 folder_name = f"YCBG_{now_str}"
+                 file_name = "Yeu Cau Bao Gia.xlsx"
                  
+             if os.path.isdir(output_path):
+                 full_folder_path = os.path.join(output_path, folder_name)
                  try:
                      os.makedirs(full_folder_path, exist_ok=True)
-                     # Set the output path to the Phase 1 file INSIDE this folder
-                     output_path = os.path.join(full_folder_path, "Danh Sach Thong Bao Moi Thau.xlsx")
+                     output_path = os.path.join(full_folder_path, file_name)
                  except Exception as e:
                      messagebox.showerror("Error", f"Could not create folder: {e}")
                      return
              else:
-                 # If user entered a file path manually (unlikely if they stuck to browse), 
-                 # we could try to use the parent directory?
-                 # Or just respect the file path if they really want to.
-                 # But request says "folder save path".
-                 # Let's assume if it ends in .xlsx, use parent dir.
                  if output_path.endswith(".xlsx"):
-                      # Use parent dir?
                       parent = os.path.dirname(output_path)
                       if os.path.isdir(parent):
-                           import datetime
-                           now_str = datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")
-                           folder_name = f"Ket Qua Dau Thau {now_str}"
                            full_folder_path = os.path.join(parent, folder_name)
                            try:
                                os.makedirs(full_folder_path, exist_ok=True)
-                               output_path = os.path.join(full_folder_path, "Danh Sach Thong Bao Moi Thau.xlsx")
+                               output_path = os.path.join(full_folder_path, file_name)
                            except: pass
 
 
@@ -734,6 +734,13 @@ class ScraperApp(ctk.CTk):
                 if "..." in exclude: exclude = "" 
         elif current_tab == "Công bố giá thuốc":
             mode = "DRUG_PRICE" 
+        elif current_tab == "Yêu cầu báo giá":
+            mode = "RFQ"
+            kw = self.entry_rfq_keywords.get().strip()
+            if not kw:
+                messagebox.showerror("Lỗi", "Vui lòng nhập từ khóa tìm kiếm!", parent=self)
+                self.reset_ui()
+                return 
 
         # Threading
         t = threading.Thread(target=self.run_process, args=(output_path, start_ministry, is_sequential, mode, kw, exclude, from_date, to_date))
@@ -778,6 +785,18 @@ class ScraperApp(ctk.CTk):
                     output_path=output_path,
                     pause_event=self.pause_event,
                     stop_event=self.stop_event
+                )
+                print("\n>>> COMPLETED SUCCESSFULLY!")
+                self.timer_running = False
+                self.status_label.configure(text="Status: Completed ✅")
+                messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
+                return
+            elif mode == "RFQ":
+                scrape_muasamcong.run_rfq_scrape(
+                    output_path=output_path,
+                    pause_event=self.pause_event,
+                    stop_event=self.stop_event,
+                    keywords=kw
                 )
                 print("\n>>> COMPLETED SUCCESSFULLY!")
                 self.timer_running = False

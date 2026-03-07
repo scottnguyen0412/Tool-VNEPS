@@ -1313,6 +1313,399 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
         browser.close()
 
 
+def run_rfq_scrape(output_path=None, pause_event=None, stop_event=None, keywords=""):
+    print(f"--- Bắt đầu cào Yêu cầu báo giá ---")
+    if output_path is None:
+        output_path = "YeuCauBaoGia.xlsx"
+    if not output_path.endswith(".xlsx"):
+        output_path += ".xlsx"
+        
+    try:
+        temp_dir = os.path.join(os.path.dirname(os.path.abspath(output_path)), "temp")
+        os.makedirs(temp_dir, exist_ok=True)
+    except:
+        temp_dir = os.path.dirname(output_path)
+        
+    csv_name = os.path.basename(output_path).replace(".xlsx", ".csv")
+    csv_path = os.path.join(temp_dir, csv_name)
+    
+    def check_status():
+        if stop_event and stop_event.is_set():
+            raise InterruptedError("Stopped by user.")
+        if pause_event and not pause_event.is_set():
+            print(">>> PAUSED...")
+            pause_event.wait()
+            if stop_event and stop_event.is_set():
+                 raise InterruptedError("Stopped by user.")
+            print(">>> RESUMED.")
+
+    def format_datetime(iso):
+        if not iso: return ""
+        try:
+            # Format: dd/mm/yyyy hh:mm
+            import datetime
+            d = datetime.datetime.fromisoformat(iso.replace("Z", "+00:00").replace("T", " "))
+            return d.strftime("%d/%m/%Y %H:%M")
+        except:
+            return str(iso)
+
+    with sync_playwright() as p:
+        browser = None
+        try: browser = p.chromium.launch(headless=False, channel="chrome")
+        except:
+            try: browser = p.chromium.launch(headless=False, channel="msedge")
+            except: browser = p.chromium.launch(headless=False)
+            
+        context = browser.new_context(viewport={"width": 1366, "height": 768}, ignore_https_errors=True)
+        page = context.new_page()
+
+        print("Navigating to Contractor Selection Search...")
+        url = "https://muasamcong.mpi.gov.vn/web/guest/contractor-selection?render=search"
+        try:
+            page.goto(url, timeout=60000)
+        except:
+            page.reload()
+
+        try:
+            print("Configuring search criteria for RFQ...")
+            check_status()
+            
+            page.wait_for_selector('.ant-select-selection--single', timeout=30000)
+            
+            # 1. Select "Tìm theo": "Yêu cầu báo giá"
+            dropdown = page.locator('.ant-select-selection--single').first
+            dropdown.click()
+            time.sleep(1)
+            opts = page.locator("li.ant-select-dropdown-menu-item")
+            for i in range(opts.count()):
+                if opts.nth(i).inner_text().strip() == "Yêu cầu báo giá":
+                    opts.nth(i).click()
+                    break
+            print("Selected Search By: Yêu cầu báo giá")
+            time.sleep(2)
+
+            # 2. Enter Keywords
+            key_input = page.locator('input[placeholder*="Nhập mã/ tên yêu cầu báo giá"]') 
+            key_input.fill(keywords)
+
+            # 3. Match type: "Khớp từ hoặc một số từ (Phân biệt dấu)"
+            try:
+                page.locator("label").filter(has_text="Khớp từ hoặc một số từ (Phân biệt dấu)").click()
+            except: pass
+
+            # 4. Click Search and catch API
+            search_btn = page.locator("button.content__footer__btn").filter(has_text="Tìm kiếm")
+            
+            api_url = None
+            base_payload = None
+            
+            with page.expect_request(lambda request: "services/smart/search" in request.url and request.method == "POST", timeout=10000) as expect_req:
+                search_btn.click()
+                
+            first_req = expect_req.value
+            api_url = first_req.url
+            base_payload = first_req.post_data_json
+            
+        except Exception as e:
+            print(f"Lỗi khởi tạo UI: {e}")
+            browser.close()
+            return
+            
+        if not api_url or not base_payload:
+            print("Failed to capture API request.")
+            browser.close()
+            return
+            
+        print("API Scraper Configured. Starting batch processing...")
+        current_payload_obj = base_payload[0] if isinstance(base_payload, list) else base_payload
+        current_payload_obj["pageSize"] = 50
+        
+        page_num = 0
+        total_fetched = 0
+        api_context = context.request
+        item_buffer = []
+
+        import datetime
+        current_dt = datetime.datetime.now()
+        
+        while True:
+            check_status()
+            current_payload_obj["pageNumber"] = page_num
+            final_payload = [current_payload_obj] if isinstance(base_payload, list) else current_payload_obj
+            
+            print(f"--- Fetching API Page {page_num} (Size: 50) ---")
+            
+            retry = 0
+            response_json = None
+            while retry < 3:
+                try:
+                    resp = api_context.post(api_url, data=final_payload)
+                    if resp.ok:
+                        response_json = resp.json()
+                        break
+                    else:
+                        time.sleep(2)
+                        retry += 1
+                except:
+                     time.sleep(2)
+                     retry += 1
+            
+            if not response_json:
+                print("Failed to get response after retries.")
+                break
+            
+            items = []
+            try:
+                if "page" in response_json and "content" in response_json["page"]:
+                    items = response_json["page"]["content"]
+                elif "content" in response_json:
+                    items = response_json["content"]
+                elif isinstance(response_json, list):
+                     items = response_json
+            except: pass
+            
+            if not items:
+                print("No items in response. End of items.")
+                break
+                
+            df_new = []
+            
+            for item in items:
+                # Format Date
+                pub_date = format_datetime(item.get("publicDate"))
+                dec_date = format_datetime(item.get("decisionDate"))
+                
+                # Check status
+                status_text = "Chưa hết hạn nhận báo giá"
+                close_dt_iso = item.get("recceiveCloseDate") or item.get("bidCloseDate")
+                if close_dt_iso:
+                    try:
+                        c_dt = datetime.datetime.fromisoformat(close_dt_iso.split(".")[0].replace("Z", "+00:00").replace("T", " "))
+                        if c_dt.replace(tzinfo=None) < current_dt:
+                            status_text = "Đã hết hạn nhận báo giá"
+                    except: pass
+                
+                row = {
+                    "Mã YCBG": item.get("notifyNo"),
+                    "Tên": item.get("name") or item.get("bidName"),
+                    "Chủ Đầu tư": item.get("investorName"),
+                    "Ngày đăng tải": pub_date,
+                    "Ngày phê duyệt": dec_date,
+                    "Trạng thái": status_text,
+                    "Id": item.get("id")
+                }
+                df_new.append(row)
+                
+            item_buffer.extend(df_new)
+            total_fetched += len(df_new)
+            print(f"  Got {len(df_new)} items (Total: {total_fetched}).")
+            
+            if len(item_buffer) >= 200:
+                save_batch_csv(item_buffer, csv_path)
+                item_buffer = []
+                
+            page_num += 1
+            time.sleep(1)
+
+        save_batch_csv(item_buffer, csv_path)
+        if os.path.exists(csv_path):
+            finalize_excel({"YeuCauBaoGia": csv_path}, output_path)
+        print(f"Completed Phase 1! Data saved to {output_path}")
+
+        # --- Phase 2: Details ---
+        print("\n--- Phase 2: Lấy chi tiết Yêu Cầu Báo Giá ---")
+        detail_path = output_path.replace("Yeu Cau Bao Gia.xlsx", "Yeu Cau Bao Gia Detail.xlsx")
+        csv_detail_name = "Yeu Cau Bao Gia Detail.csv"
+        csv_noidung_name = "Noi Dung YCBG.csv"
+        csv_detail_path = os.path.join(temp_dir, csv_detail_name)
+        csv_noidung_path = os.path.join(temp_dir, csv_noidung_name)
+        
+        detail_endpoint = "https://muasamcong.mpi.gov.vn/o/egp-portal-contractor-selection-v2/services/get-request-quote"
+        
+        import pandas as pd
+        import json
+        
+        try:
+            df_p1 = pd.read_csv(csv_path)
+            ids_to_fetch = df_p1["Id"].dropna().astype(str).str.strip().tolist()
+        except Exception as e:
+            print(f"Không thể đọc ID từ file CSV Phase 1: {e}")
+            ids_to_fetch = []
+            
+        print(f"Tổng số YCBG cần lấy chi tiết: {len(ids_to_fetch)}")
+        
+        detail_buffer = []    
+        noidung_buffer = []  
+        
+        def fmt_dt(iso_str):
+            return format_datetime(iso_str)
+            
+        def fmt_num(x):
+            if x is None or x == "": return ""
+            try: return "{:,.0f}".format(float(x)).replace(",", ".")
+            except: return str(x)
+            
+        for idx, rq_id in enumerate(ids_to_fetch):
+            check_status()
+            print(f"  [{idx+1}/{len(ids_to_fetch)}] Fetching detail for ID: {rq_id}")
+            
+            payload_detail = {"id": rq_id}
+            
+            retry = 0
+            detail_data = None
+            while retry < 3:
+                try:
+                    resp = api_context.post(detail_endpoint, data=payload_detail)
+                    if resp.ok:
+                        detail_data = resp.json()
+                        break
+                    else:
+                        print(f"      Code {resp.status} - retrying...")
+                        time.sleep(1)
+                        retry += 1
+                except Exception as e:
+                    print(f"      API exception: {e}")
+                    time.sleep(1)
+                    retry += 1
+                    time.sleep(1)
+                    retry += 1
+                    
+            if not detail_data:
+                print(f"    -> Lỗi kết nối lấy detail ID: {rq_id}")
+                continue
+                
+            try:
+                rq_obj = detail_data.get("bidoRequestQuote", {})
+                if not rq_obj: continue
+                
+                # Trạng thái yêu cầu báo giá
+                st_val = rq_obj.get("status", "")
+                st_text = st_val
+                if st_val == "01": st_text = "Đã đăng tải"
+                elif st_val == "02": st_text = "Chưa đăng tải"
+                elif st_val == "03": st_text = "Đã hủy"
+                elif st_val == "00": st_text = "Đang soạn thảo"
+                
+                # Phân loại báo giá
+                rq_type = rq_obj.get("requestQuoteType", "")
+                if rq_type == "THUOC": rq_type_txt = "Gói thầu mua thuốc"
+                elif rq_type == "VTTT": rq_type_txt = "Gói thầu mua linh kiện, phụ kiện, vật tư thay thế sử dụng cho thiết bị y tế"
+                elif rq_type == "VATTU": rq_type_txt = "Gói thầu mua hóa chất, vật tư xét nghiệm, thiết bị y tế"
+                elif rq_type == "HHDVK": rq_type_txt = "Gói thầu hàng hoá, dịch vụ khác"
+                else: rq_type_txt = rq_type
+                
+                # Hình thức tiếp nhận báo giá
+                rq_form = rq_obj.get("requestQuoteForm", "")
+                if rq_form == "OFFLINE": rq_form_txt = "Trực Tiếp"
+                elif rq_form == "EMAIL": rq_form_txt = "Email"
+                elif rq_form == "FAX": rq_form_txt = "Fax"
+                else: rq_form_txt = rq_form
+                
+                # Địa điểm
+                loc_str = rq_obj.get("location", "")
+                loc_txt = ""
+                try:
+                    if loc_str:
+                        loc_arr = json.loads(loc_str)
+                        if loc_arr and isinstance(loc_arr, list):
+                            dName = loc_arr[0].get("districtName", "")
+                            pName_loc = loc_arr[0].get("provName", "")
+                            loc_txt = ", ".join(filter(bool, [dName, pName_loc]))
+                except: pass
+                
+                # Thời hạn
+                rf_from = fmt_dt(rq_obj.get("receptionDateFrom"))
+                rf_to = fmt_dt(rq_obj.get("receptionDateTo"))
+                th_tiep_nhan = f"từ ngày {rf_from} đến trước ngày {rf_to}" if rf_from or rf_to else ""
+                
+                val_per = str(rq_obj.get("rqValidityPeriod", ""))
+                val_unit = rq_obj.get("rqValidityPeriodUnit", "")
+                if val_unit == "D": val_unit = "ngày"
+                elif val_unit == "M": val_unit = "tháng"
+                elif val_unit == "Y": val_unit = "năm"
+                
+                th_hieu_luc = f"{val_per} {val_unit} kể từ ngày {rf_to}" if val_per else ""
+                
+                # Ngày đăng tải
+                pub_d = rq_obj.get("publicDate")
+                pub_d_str = ""
+                if pub_d:
+                    pub_fmt = fmt_dt(pub_d)
+                    if pub_fmt:
+                        pub_d_str = pub_fmt.split(" ")[0]
+                
+                row_detail = {
+                    "Mã YCBG": rq_obj.get("requestQuoteNo"),
+                    "Tên Yêu Cầu Báo Giá": rq_obj.get("requestQuoteName"),
+                    "Tên dự án/ dự toán mua sắm": rq_obj.get("pName"),
+                    "Tên gói thầu": rq_obj.get("bidName"),
+                    "Ngày đăng tải": pub_d_str,
+                    "Trạng thái yêu cầu báo giá": st_text,
+                    "Đơn vị yêu cầu báo giá": rq_obj.get("investorName"),
+                    "Phân loại báo giá": rq_type_txt,
+                    "Địa điểm thực hiện": loc_txt,
+                    "Họ Tên": rq_obj.get("responsibleName"),
+                    "Chức Vụ": rq_obj.get("responsiblePosition"),
+                    "Số Điện Thoại": rq_obj.get("responsiblePhoneNumber"),
+                    "Địa chỉ": rq_obj.get("responsibleAddress"),
+                    "Email": rq_obj.get("responsibleEmail"),
+                    "Hình thức tiếp nhận báo giá": rq_form_txt,
+                    "Địa điểm phát hành yêu cầu báo giá": "https://muasamcong.mpi.gov.vn",
+                    "Thời hạn tiếp nhận báo giá": th_tiep_nhan,
+                    "Thời hạn có hiệu lực của báo giá": th_hieu_luc
+                }
+                detail_buffer.append(row_detail)
+                
+                # Nội dung
+                fv_str = rq_obj.get("formValue", "")
+                try:
+                    if fv_str:
+                        fv_obj = json.loads(fv_str)
+                        items_table = fv_obj.get("Table", [])
+                        for it in items_table:
+                            row_n = {
+                                "Mã YCBG": rq_obj.get("requestQuoteNo"),
+                                "Mã thuốc": it.get("medicineCode"),
+                                "Tên hoạt chất": it.get("tenHoatChat"),
+                                "Nhóm TCKT": it.get("nhomTCKT"),
+                                "Nồng độ hoặc hàm lượng": it.get("nongDo"),
+                                "Đường dùng": it.get("duongDung"),
+                                "Dạng bào chế": it.get("dangBaoChe"),
+                                "Đơn vị tính": it.get("uom"),
+                                "Số lương": fmt_num(it.get("quantity"))
+                            }
+                            noidung_buffer.append(row_n)
+                except: pass
+                    
+                if (idx + 1) % 100 == 0:
+                    save_batch_csv(detail_buffer, csv_detail_path)
+                    save_batch_csv(noidung_buffer, csv_noidung_path)
+                    detail_buffer = []
+                    noidung_buffer = []
+                    
+            except Exception as e:
+                print(f"    -> Lỗi parse detail ID {rq_id}: {e}")
+                
+            time.sleep(0.3)
+
+        save_batch_csv(detail_buffer, csv_detail_path)
+        save_batch_csv(noidung_buffer, csv_noidung_path)
+        
+        detail_files_to_pack = {}
+        if os.path.exists(csv_detail_path):
+            detail_files_to_pack["Yeu Cau Bao Gia Detail"] = csv_detail_path
+        if os.path.exists(csv_noidung_path):
+            detail_files_to_pack["Nội dung YCBG"] = csv_noidung_path
+            
+        if detail_files_to_pack:
+            try:
+                finalize_excel(detail_files_to_pack, detail_path)
+                print(f"Completed Phase 2! Detail Data saved to {detail_path}")
+            except Exception as e:
+                print(f"Lỗi lưu file chi tiết: {e}")
+        browser.close()
+
+
 def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
     if output_path is None:
         output_path = "CongBoGiaThuoc.xlsx"
