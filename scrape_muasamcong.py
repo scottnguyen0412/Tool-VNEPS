@@ -1742,38 +1742,37 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
         "sorting": None
     }
 
-    all_data = [] # Deprecated, using items_buffer + existing_ids
-    existing_ids = set()
-
+    all_data_dict = {}
+    
     # Load existing data if file exists (CSV first)
+    df_old = None
     if os.path.exists(csv_path):
         try:
              print(f"Loading existing CSV: {csv_path}...")
              df_old = pd.read_csv(csv_path, dtype=str)
-             if "id" in df_old.columns:
-                 existing_ids = set(df_old["id"].dropna())
              print(f"Loaded {len(df_old)} existing records from CSV.")
         except Exception as e:
              print(f"Warning reading CSV: {e}")
     elif os.path.exists(output_path):
         try:
             print(f"Loading existing data from {output_path}...")
-            df_old = pd.read_excel(output_path)
-            
-            # Check for 'id' column
-            if "id" in df_old.columns:
-                existing_ids = set(df_old["id"].dropna().astype(str))
-            
+            df_old = pd.read_excel(output_path, dtype=str)
             print(f"Loaded existing records from Excel.")
         except Exception as e:
             print(f"Warning: could not read existing file: {e}")
             
-    item_buffer = []
+    if df_old is not None and not df_old.empty:
+        df_old = df_old.fillna("")
+        for rec in df_old.to_dict("records"):
+            iid = str(rec.get("id", "")).strip()
+            if iid:
+                # Store all existing values as strings for comparison
+                all_data_dict[iid] = {k: str(v).strip() for k, v in rec.items()}
 
     skip_count = 0
-    # max_result_count: Có thể tùy chỉnh: 15, 20, 50,100 
     total_count = None
     processed_count = 0
+    last_save_count = 0
 
     # formatting helper
     def format_money(val):
@@ -1875,9 +1874,10 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
                     if not items: continue # Page rỗng
                     
                     batch_new = 0
+                    batch_update = 0
                     for item in items:
-                        item_id = str(item.get("id", ""))
-                        if not item_id or item_id in existing_ids:
+                        item_id = str(item.get("id", "")).strip()
+                        if not item_id:
                             continue
                             
                         trang_thai_html = str(item.get("trangThaiCongBo") or "")
@@ -1912,23 +1912,38 @@ def run_drug_price_scrape(output_path=None, pause_event=None, stop_event=None):
                             "Đối tượng thực hiện công bố": item.get("donViKeKhai"),
                             "id": item_id
                         }
-                        item_buffer.append(row)
-                        existing_ids.add(item_id)
-                        batch_new += 1
+                        row = {k: ("" if v is None else str(v).strip()) for k, v in row.items()}
+                        
+                        if item_id not in all_data_dict:
+                            all_data_dict[item_id] = row
+                            batch_new += 1
+                        else:
+                            old_row = all_data_dict[item_id]
+                            changed = False
+                            for k, v in row.items():
+                                if old_row.get(k, "") != v:
+                                    changed = True
+                                    break
+                            if changed:
+                                all_data_dict[item_id] = row
+                                batch_update += 1
                     
                     processed_count += len(items)
-                    print(f"  [Skip: {skip}] Fetched {len(items)} items. (New: {batch_new}) Total processed: {processed_count}/{total_count}")
+                    print(f"  [Skip: {skip}] Fetched {len(items)} items. (New: {batch_new}, Upd: {batch_update}) Total processed: {processed_count}/{total_count}")
                     
-                    if len(item_buffer) >= 200:
-                        save_batch_csv(item_buffer, csv_path)
-                        item_buffer = []
+                    if processed_count - last_save_count >= 1000:
+                        df_save = pd.DataFrame(list(all_data_dict.values()))
+                        df_save.to_csv(csv_path, index=False, encoding='utf-8-sig')
+                        last_save_count = processed_count
                         
                 except Exception as e:
                     print(f"Lỗi hệ thống khi phân tích skip {skip}: {e}")
                     new_f = executor.submit(fetch_page, skip)
                     future_to_skip[new_f] = skip
 
-    save_batch_csv(item_buffer, csv_path)
+    # Cập nhật file cuối cùng
+    df_final = pd.DataFrame(list(all_data_dict.values()))
+    df_final.to_csv(csv_path, index=False, encoding='utf-8-sig')
     if os.path.exists(csv_path):
         finalize_excel({"CongBoGiaThuoc": csv_path}, output_path)
     print(f"Completed! Data saved to {output_path}")
