@@ -1079,13 +1079,12 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                               "Tên thành phần thuốc": lot.get("lotName"),
                               "Mã định danh": lot.get("contractorCode"),
                               "Tên nhà thầu": lot.get("contractorName"),
-                              "Tỷ lệ phần trăm giảm giá (nếu có)": lot.get("discountPercent"),
-                              "Giá dự thầu": fmt_val(lot.get("lotFinalPrice")),
-                              
-                              # Joined fields
-                              "Hiệu lực HSDT": linked_bid.get("bidValidityNum"),
+                              "Hiệu lực HSDT (Ngày)": linked_bid.get("bidValidityNum"),
                               "Bảo đảm dự thầu cho các phần tham dự (VND)": fmt_val(linked_bid.get("bidGuarantee")),
-                              "Hiệu lực của BĐDT": linked_bid.get("bidGuaranteeValidity")
+                              "Hiệu lực của BĐDT (Ngày)": linked_bid.get("bidGuaranteeValidity"),
+                              "Giá dự thầu": fmt_val(lot.get("lotPrice")),
+                              "Tỷ lệ phần trăm giảm giá (nếu có)": lot.get("discountPercent"),
+                              "Giá dự thầu sau giảm giá (VND)": fmt_val(lot.get("lotFinalPrice"))
                           }
                           phase3_buffer.append(row)
                      
@@ -1665,6 +1664,7 @@ def run_rfq_scrape(output_path=None, pause_event=None, stop_event=None, keywords
                         for it in items_table:
                             row_n = {
                                 "Mã YCBG": rq_obj.get("requestQuoteNo"),
+                                "Danh mục hàng hóa/ dịch vụ": it.get("category"),
                                 "Mã thuốc": it.get("medicineCode"),
                                 "Tên hoạt chất": it.get("tenHoatChat"),
                                 "Nhóm TCKT": it.get("nhomTCKT"),
@@ -1672,7 +1672,13 @@ def run_rfq_scrape(output_path=None, pause_event=None, stop_event=None, keywords
                                 "Đường dùng": it.get("duongDung"),
                                 "Dạng bào chế": it.get("dangBaoChe"),
                                 "Đơn vị tính": it.get("uom"),
-                                "Số lương": fmt_num(it.get("quantity"))
+                                "Số lượng": fmt_num(it.get("quantity")),
+                                "Khối lượng": it.get("qty"),
+                                "Đơn vị tính": it.get("unit"),
+                                "Mô tả chi tiết": it.get("description"),
+                                "Địa điểm thực hiện": it.get("location"),
+                                "Quy cách": it.get("specification"),
+                                "Ghi chú": it.get("note")
                             }
                             noidung_buffer.append(row_n)
                 except: pass
