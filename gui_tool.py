@@ -345,6 +345,18 @@ class ScraperApp(ctk.CTk):
         self.entry_rfq_keywords.pack(fill="x", pady=(0, 10))
         self.entry_rfq_keywords.insert(0, "thuốc, generic, genegic")
         
+        # RFQ Date Range
+        self.rfq_date_frame = ctk.CTkFrame(self.rfq_frame, fg_color="transparent")
+        self.rfq_date_frame.pack(fill="x", pady=5)
+        
+        ctk.CTkLabel(self.rfq_date_frame, text="Từ ngày (dd/mm/yyyy):").pack(side="left", padx=(0, 5))
+        self.entry_rfq_from_date = ctk.CTkEntry(self.rfq_date_frame, width=100)
+        self.entry_rfq_from_date.pack(side="left", padx=(0, 10))
+        
+        ctk.CTkLabel(self.rfq_date_frame, text="Đến ngày:").pack(side="left", padx=(0, 5))
+        self.entry_rfq_to_date = ctk.CTkEntry(self.rfq_date_frame, width=100)
+        self.entry_rfq_to_date.pack(side="left")
+        
         ctk.CTkLabel(self.rfq_frame, text="Hệ thống sẽ tự động chọn:\n- Tìm Theo: Yêu Cầu Báo Giá\n- Từ khóa: Khớp từ hoặc một số từ (Phân biệt dấu)", 
                      text_color="gray", font=ctk.CTkFont(size=11), justify="left").pack(anchor="w")
         
@@ -737,6 +749,8 @@ class ScraperApp(ctk.CTk):
         elif current_tab == "Yêu cầu báo giá":
             mode = "RFQ"
             kw = self.entry_rfq_keywords.get().strip()
+            from_date = self.entry_rfq_from_date.get().strip()
+            to_date = self.entry_rfq_to_date.get().strip()
             if not kw:
                 messagebox.showerror("Lỗi", "Vui lòng nhập từ khóa tìm kiếm!", parent=self)
                 self.reset_ui()
@@ -796,7 +810,9 @@ class ScraperApp(ctk.CTk):
                     output_path=output_path,
                     pause_event=self.pause_event,
                     stop_event=self.stop_event,
-                    keywords=kw
+                    keywords=kw,
+                    from_date=from_date,
+                    to_date=to_date
                 )
                 print("\n>>> COMPLETED SUCCESSFULLY!")
                 self.timer_running = False

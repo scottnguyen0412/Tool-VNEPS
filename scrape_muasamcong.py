@@ -1312,12 +1312,17 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
         browser.close()
 
 
-def run_rfq_scrape(output_path=None, pause_event=None, stop_event=None, keywords=""):
+def run_rfq_scrape(output_path=None, pause_event=None, stop_event=None, keywords="", from_date="", to_date=""):
     print(f"--- Bắt đầu cào Yêu cầu báo giá ---")
     if output_path is None:
         output_path = "YeuCauBaoGia.xlsx"
     if not output_path.endswith(".xlsx"):
         output_path += ".xlsx"
+    
+    print(f"File: {output_path}")
+    print(f"Keywords: {keywords[:50] if keywords else 'N/A'}...")
+    if from_date or to_date:
+        print(f"Date Range: {from_date} - {to_date}")
         
     try:
         temp_dir = os.path.join(os.path.dirname(os.path.abspath(output_path)), "temp")
@@ -1387,12 +1392,38 @@ def run_rfq_scrape(output_path=None, pause_event=None, stop_event=None, keywords
             key_input = page.locator('input[placeholder*="Nhập mã/ tên yêu cầu báo giá"]') 
             key_input.fill(keywords)
 
-            # 3. Match type: "Khớp từ hoặc một số từ (Phân biệt dấu)"
+            # 3. Use Date Range if provided
+            if from_date or to_date:
+                print(f"Setting Date Range: {from_date} - {to_date}")
+                try:
+                    dates = page.locator('input[placeholder="dd/mm/yyyy"]')
+                    if dates.count() >= 2:
+                        if from_date:
+                            start_inp = dates.nth(0)
+                            start_inp.click()
+                            time.sleep(0.5)
+                            page.keyboard.type(from_date, delay=100)
+                            page.keyboard.press("Enter")
+                            time.sleep(0.5)
+                            
+                        if to_date:
+                            end_inp = dates.nth(1)
+                            end_inp.click() 
+                            time.sleep(0.5)
+                            page.keyboard.type(to_date, delay=100)
+                            page.keyboard.press("Enter")
+                            time.sleep(0.5)
+                    else:
+                        print("Warning: Could not find date inputs with placeholder 'dd/mm/yyyy'.")
+                except Exception as e:
+                    print(f"Error setting dates: {e}")
+
+            # 4. Match type: "Khớp từ hoặc một số từ (Phân biệt dấu)"
             try:
                 page.locator("label").filter(has_text="Khớp từ hoặc một số từ (Phân biệt dấu)").click()
             except: pass
 
-            # 4. Click Search and catch API
+            # 5. Click Search and catch API
             search_btn = page.locator("button.content__footer__btn").filter(has_text="Tìm kiếm")
             
             api_url = None
