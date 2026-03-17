@@ -362,7 +362,7 @@ def fetch_contractor_input_result(api_context, token, bid_id):
     return None
 
 
-def run_contractor_selection(output_path=None, keywords="", exclude_words="", from_date="", to_date="", ib_list="", pause_event=None, stop_event=None):
+def run_contractor_selection(output_path=None, keywords="", exclude_words="", from_date="", to_date="", ib_list="", search_type="", use_default_keywords=True, use_default_exclude=True, pause_event=None, stop_event=None):
     """
     Function to scrape Contractor Selection Results (Kết quả lựa chọn nhà thầu).
     Specific logic for:
@@ -385,15 +385,17 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
     
     default_exclude = "linh kiện, xây dựng, cải tạo, lắp đặt, thi công"
     
-    if not keywords:
+    # Only use defaults if allowed by use_default flags
+    if use_default_keywords and not keywords:
         keywords = default_keywords
-    if not exclude_words:
+    if use_default_exclude and not exclude_words:
         exclude_words = default_exclude
 
     print(f"--- Starting Contractor Selection Scrape ---")
     print(f"File: {output_path}")
-    print(f"Keywords: {keywords[:50]}...")
-    print(f"Exclude: {exclude_words}")
+    print(f"Search Type: {search_type if search_type else 'Mặc định'}")
+    print(f"Keywords: {keywords[:50]}..." if keywords else "Keywords: (Để trống)")
+    print(f"Exclude: {exclude_words[:50]}..." if exclude_words else "Exclude: (Để trống)")
     if from_date or to_date:
         print(f"Date Range: {from_date} - {to_date}")
 
@@ -528,16 +530,42 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
 
             else:
                 # MODE: NORMAL FILTER
-                # 1. Select "Tìm theo": "Thông báo mời thầu thuốc, dược liệu..."
+                # 1. Select "Tìm theo" based on search_type parameter
                 dropdown = page.locator('.ant-select-selection--single').first
                 dropdown.click()
                 time.sleep(1)
-                option = page.locator("li.ant-select-dropdown-menu-item").filter(has_text="Thông báo mời thầu thuốc, dược liệu")
-                if option.count() > 0:
-                    option.first.click()
-                    print("Selected Search By: Medicine")
+                
+                # Determine which option to select based on search_type
+                opts = page.locator("li.ant-select-dropdown-menu-item")
+                selected = False
+                
+                if search_type and "thuốc, dược liệu" in search_type.lower():
+                    # Select Medicine option
+                    for i in range(opts.count()):
+                        opt_text = opts.nth(i).inner_text().strip()
+                        if "thuốc" in opt_text.lower() and "dược liệu" in opt_text.lower():
+                            opts.nth(i).click()
+                            print(f"Selected Search By: {opt_text}")
+                            selected = True
+                            break
                 else:
-                    print("Warning: Could not find 'Medicine' search option.")
+                    # Default or select "Thông báo mời thầu"
+                    for i in range(opts.count()):
+                        opt_text = opts.nth(i).inner_text().strip()
+                        if opt_text == "Thông báo mời thầu":
+                            opts.nth(i).click()
+                            print("Selected Search By: Thông báo mời thầu")
+                            selected = True
+                            break
+                
+                if not selected:
+                    # Fallback to first medicine-like option
+                    option = page.locator("li.ant-select-dropdown-menu-item").filter(has_text="Thông báo mời thầu thuốc, dược liệu")
+                    if option.count() > 0:
+                        option.first.click()
+                        print("Selected Search By: Medicine (Fallback)")
+                    else:
+                        print("Warning: Could not find search option, using default.")
                 
                 time.sleep(1)
 

@@ -282,15 +282,27 @@ class ScraperApp(ctk.CTk):
         # --- Mode 1: Filter Frame ---
         self.filter_frame = ctk.CTkFrame(self.contractor_frame, fg_color="transparent")
         
+        # Search Type Selection
+        ctk.CTkLabel(self.filter_frame, text="Loại tìm theo:", font=ctk.CTkFont(weight="bold")).pack(anchor="w")
+        self.search_type_combo = ctk.CTkComboBox(
+            self.filter_frame,
+            values=[
+                "Thông báo mời thầu thuốc, dược liệu, vị thuốc cổ truyền",
+                "Thông báo mời thầu"
+            ],
+            state="readonly",
+            width=400
+        )
+        self.search_type_combo.pack(fill="x", pady=(0, 10))
+        self.search_type_combo.set("Thông báo mời thầu thuốc, dược liệu, vị thuốc cổ truyền")
+        
         ctk.CTkLabel(self.filter_frame, text="Từ khóa (mặc định):").pack(anchor="w")
-        self.entry_keywords = ctk.CTkEntry(self.filter_frame, height=30)
+        self.entry_keywords = ctk.CTkEntry(self.filter_frame, height=30, placeholder_text="thuốc, generic, tân dược, biệt dược, bệnh viện, chữa bệnh, vật tư y tế, điều trị, bệnh nhân, thiết bị y tế, khám chữa bệnh, khám bệnh, chữa bệnh, dược liệu, dược")
         self.entry_keywords.pack(fill="x", pady=(0, 5))
-        self.entry_keywords.insert(0, "thuốc, generic, tân dược, biệt dược, bệnh viện, chữa bệnh, vật tư y tế, điều trị, bệnh nhân, thiết bị y tế, khám chữa bệnh, khám bệnh, chữa bệnh, dược liệu, dược")
         
         ctk.CTkLabel(self.filter_frame, text="Loại trừ:").pack(anchor="w")
-        self.entry_exclude = ctk.CTkEntry(self.filter_frame, height=30)
+        self.entry_exclude = ctk.CTkEntry(self.filter_frame, height=30, placeholder_text="linh kiện, xây dựng, cải tạo, lắp đặt, thi công")
         self.entry_exclude.pack(fill="x", pady=(0, 5))
-        self.entry_exclude.insert(0, "linh kiện, xây dựng, cải tạo, lắp đặt, thi công")
 
         self.date_frame = ctk.CTkFrame(self.filter_frame, fg_color="transparent")
         self.date_frame.pack(fill="x", pady=5)
@@ -715,6 +727,7 @@ class ScraperApp(ctk.CTk):
         exclude = ""
         from_date = ""
         to_date = ""
+        search_type = ""
         
         if current_tab == "Thông Tin Nhà Đầu Tư":
             val = self.combo_ministry.get()
@@ -737,13 +750,16 @@ class ScraperApp(ctk.CTk):
                     return
             else:
                 mode = "CONTRACTOR"
-                kw = self.entry_keywords.get()
-                exclude = self.entry_exclude.get()
+                kw = self.entry_keywords.get().strip()
+                exclude = self.entry_exclude.get().strip()
                 from_date = self.entry_from_date.get().strip()
                 to_date = self.entry_to_date.get().strip()
+                search_type = self.search_type_combo.get() if hasattr(self, 'search_type_combo') else ""
                 
-                if "..." in kw: kw = ""
-                if "..." in exclude: exclude = "" 
+                # Only use defaults if user entered something (field is NOT empty)
+                # If field is completely empty → user wants to skip default
+                use_default_keywords = (kw != "")
+                use_default_exclude = (exclude != "") 
         elif current_tab == "Công bố giá thuốc":
             mode = "DRUG_PRICE" 
         elif current_tab == "Yêu cầu báo giá":
@@ -757,11 +773,13 @@ class ScraperApp(ctk.CTk):
                 return 
 
         # Threading
-        t = threading.Thread(target=self.run_process, args=(output_path, start_ministry, is_sequential, mode, kw, exclude, from_date, to_date))
+        use_default_kw = use_default_keywords if mode == "CONTRACTOR" else True
+        use_default_ex = use_default_exclude if mode == "CONTRACTOR" else True
+        t = threading.Thread(target=self.run_process, args=(output_path, start_ministry, is_sequential, mode, kw, exclude, from_date, to_date, search_type, use_default_kw, use_default_ex))
         t.daemon = True
         t.start()
     
-    def run_process(self, output_path, start_ministry, is_sequential, mode="NORMAL", kw="", exclude="", from_date="", to_date=""):
+    def run_process(self, output_path, start_ministry, is_sequential, mode="NORMAL", kw="", exclude="", from_date="", to_date="", search_type="", use_default_keywords=True, use_default_exclude=True):
         start_time = time.time()
         try:
             print(">>> INITIALIZING SCRAPER...")
@@ -774,6 +792,9 @@ class ScraperApp(ctk.CTk):
                     exclude_words=exclude,
                     from_date=from_date,
                     to_date=to_date,
+                    search_type=search_type,
+                    use_default_keywords=use_default_keywords,
+                    use_default_exclude=use_default_exclude,
                     pause_event=self.pause_event,
                     stop_event=self.stop_event
                 )
