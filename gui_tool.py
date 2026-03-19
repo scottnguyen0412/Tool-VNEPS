@@ -12,10 +12,35 @@ import time
 import shutil
 import requests
 import scrape_muasamcong
+from gui_icons import IconLib
 
 # Configuration
-ctk.set_appearance_mode("System")
+ctk.set_appearance_mode("Light")
 ctk.set_default_color_theme("blue")
+
+# === DESIGN SYSTEM (Light Mode) ===
+COLORS = {
+    "primary": "#00897B",
+    "primary_dark": "#00695C",
+    "primary_light": "#B2DFDB",
+    "accent": "#00897B",
+    "surface": "#EDF2F7",
+    "surface_light": "#FFFFFF",
+    "card": "#FFFFFF",
+    "card_hover": "#E8EDF2",
+    "success": "#2E7D32",
+    "warning": "#E65100",
+    "danger": "#C62828",
+    "text": "#1A202C",
+    "text_secondary": "#4A5568",
+    "border": "#CBD5E0",
+    "sidebar_bg": "#00695C",
+    "sidebar_text": "#FFFFFF",
+    "sidebar_accent": "#B2DFDB",
+    "input_bg": "#EDF2F7",
+    "log_bg": "#F7FAFC",
+    "log_text": "#1A202C",
+}
 
 # Resource helper for PyInstaller
 def resource_path(relative_path):
@@ -26,7 +51,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v2.0.6"
+CURRENT_VERSION = "v2.0.7"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -39,10 +64,10 @@ class AnimatedGradientBorderFrame(ctk.CTkFrame):
         if colors:
             self.colors = colors
         else:
-            # Default Rainbow (Red, Orange, Yellow, Green, Cyan, Blue, Purple)
+            # Professional Teal Gradient
             self.colors = [
-                (255, 0, 0), (255, 127, 0), (255, 255, 0), 
-                (0, 255, 0), (0, 0, 255), (75, 0, 130), (148, 0, 211)
+                (0, 137, 123), (0, 105, 92), (38, 166, 154),
+                (77, 182, 172), (0, 121, 107), (0, 150, 136)
             ]
         self.current_idx = 0
         self.t = 0.0 # Interpolation factor 0.0 to 1.0
@@ -77,40 +102,76 @@ class AnimatedGradientBorderFrame(ctk.CTkFrame):
 class LoginWindow(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
-        self.title("Login")
-        self.geometry("350x260")
+        self.title("")
+        self.geometry("440x420")
         self.resizable(False, False)
+        self.configure(fg_color=COLORS["surface_light"])
         
         # Center Window
         self.update_idletasks()
         try:
             s_w = self.winfo_screenwidth()
             s_h = self.winfo_screenheight()
-            x = int((s_w - 350) / 2)
-            y = int((s_h - 260) / 2)
+            x = int((s_w - 440) / 2)
+            y = int((s_h - 420) / 2)
             self.geometry(f"+{x}+{y}")
         except: pass
         
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.attributes("-topmost", True)
         
-        # UI
-        ctk.CTkLabel(self, text="ĐĂNG NHẬP HỆ THỐNG", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=(30, 15))
+        # Logo
+        try:
+            logo_path = resource_path("Image/BSTPharma_Logo.png")
+            if os.path.exists(logo_path):
+                pil_img = Image.open(logo_path)
+                base_height = 50
+                w_percent = (base_height / float(pil_img.size[1]))
+                w_size = int((float(pil_img.size[0]) * float(w_percent)))
+                self.login_logo = ctk.CTkImage(light_image=pil_img, size=(w_size, base_height))
+                ctk.CTkLabel(self, text="", image=self.login_logo).pack(pady=(30, 5))
+        except: pass
         
-        self.entry_user = ctk.CTkEntry(self, placeholder_text="Tên đăng nhập", width=220)
-        self.entry_user.pack(pady=5)
+        # Title
+        ctk.CTkLabel(self, text="ĐĂNG NHẬP HỆ THỐNG", 
+                     font=ctk.CTkFont(family="Segoe UI", size=20, weight="bold"),
+                     text_color=COLORS["primary"]).pack(pady=(10, 5))
+        ctk.CTkLabel(self, text="Muasamcong Data Scraper",
+                     font=ctk.CTkFont(size=12), text_color=COLORS["text_secondary"]).pack(pady=(0, 20))
         
-        self.entry_pass = ctk.CTkEntry(self, placeholder_text="Mật khẩu", show="*", width=220)
-        self.entry_pass.pack(pady=5)
+        # Form container
+        form = ctk.CTkFrame(self, fg_color="transparent")
+        form.pack(padx=50, fill="x")
+        
+        icon_lib = IconLib(resource_path("Image/MaterialIcons-Regular.ttf"))
+        icon_person = icon_lib.get_icon("person", size=18, light_color=COLORS["text_secondary"], dark_color=COLORS["text_secondary"])
+        icon_lock = icon_lib.get_icon("lock", size=18, light_color=COLORS["text_secondary"], dark_color=COLORS["text_secondary"])
+        icon_login = icon_lib.get_icon("login", size=20, light_color="white", dark_color="white")
+        
+        ctk.CTkLabel(form, text=" Tên đăng nhập", image=icon_person, compound="left", font=ctk.CTkFont(size=12, weight="bold"),
+                     text_color=COLORS["text_secondary"], anchor="w").pack(fill="x", pady=(0,4))
+        self.entry_user = ctk.CTkEntry(form, placeholder_text="Nhập username", height=42,
+                                       corner_radius=8, fg_color=COLORS["input_bg"],
+                                       border_color=COLORS["border"], border_width=1)
+        self.entry_user.pack(fill="x", pady=(0, 12))
+        
+        ctk.CTkLabel(form, text=" Mật khẩu", image=icon_lock, compound="left", font=ctk.CTkFont(size=12, weight="bold"),
+                     text_color=COLORS["text_secondary"], anchor="w").pack(fill="x", pady=(0,4))
+        self.entry_pass = ctk.CTkEntry(form, placeholder_text="Nhập mật khẩu", show="•", height=42,
+                                       corner_radius=8, fg_color=COLORS["input_bg"],
+                                       border_color=COLORS["border"], border_width=1)
+        self.entry_pass.pack(fill="x", pady=(0, 20))
         self.entry_pass.bind("<Return>", self.login_event)
         
-        self.btn_login = ctk.CTkButton(self, text="Đăng Nhập", width=220, command=self.check_login)
-        self.btn_login.pack(pady=20)
+        self.btn_login = ctk.CTkButton(form, text="ĐĂNG NHẬP", image=icon_login, compound="right", height=44, corner_radius=8,
+                                        font=ctk.CTkFont(size=14, weight="bold"),
+                                        fg_color=COLORS["primary"], hover_color=COLORS["primary_dark"],
+                                        command=self.check_login)
+        self.btn_login.pack(fill="x", pady=(0, 15))
         
-        # Guide
-        # Guide
-        ctk.CTkLabel(self, text="Bạn đã có tài khoản? Nếu chưa hãy liên hệ IT Boston Pharma", 
-                     text_color="gray", font=ctk.CTkFont(size=10), wraplength=320).pack(pady=(0, 10))
+        ctk.CTkLabel(self, text="Chưa có tài khoản? Liên hệ IT Boston Pharma", 
+                     text_color=COLORS["text_secondary"], font=ctk.CTkFont(size=11),
+                     wraplength=360).pack(pady=(0, 15))
         
         self.entry_user.focus()
 
@@ -173,98 +234,135 @@ class ScraperApp(ctk.CTk):
 
         # Window Configuration
         self.title(f"Tool Muasamcong Scrape Data ({CURRENT_VERSION})")
-        self.geometry("1200x800")
+        self.geometry("1350x800")
+        self.configure(fg_color=COLORS["surface"])
         
         # Set Icon
         try:
-             # Ensure correct path separator and existence
              icon_path = resource_path("Image/BST_Pharma_ICO.ico")
              if os.path.exists(icon_path):
                  self.iconbitmap(icon_path)
-             else:
-                 print(f"Icon not found at: {icon_path}")
         except Exception as e:
              print(f"Warning: Could not set icon ({e})")
 
         # Control Logic
+        self.icon_lib = IconLib(resource_path('Image/MaterialIcons-Regular.ttf'))
         self.pause_event = threading.Event()
-        self.pause_event.set() # Default True (Running)
+        self.pause_event.set()
         self.stop_event = threading.Event()
         
-        # Main Grid Layout
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        # ═══ MAIN LAYOUT: Left Panel | Right Panel (Logs) ═══
+        self.grid_columnconfigure(0, weight=3)
+        self.grid_columnconfigure(1, weight=2)
+        self.grid_rowconfigure(0, weight=1)
 
-        # 1. Header Frame (Top Bar)
-        self.header_frame = ctk.CTkFrame(self, height=80, corner_radius=0, fg_color=("gray90", "#2B2B2B"))
-        self.header_frame.grid(row=0, column=0, sticky="ew")
+        # ═══ LEFT PANEL (Unified: Header + Settings + Actions) ═══
+        self.left_panel = ctk.CTkFrame(self, fg_color=COLORS["card"], corner_radius=0)
+        self.left_panel.grid(row=0, column=0, sticky="nsew")
+        self.left_panel.grid_rowconfigure(3, weight=1)  # Tabs expand
+        self.left_panel.grid_columnconfigure(0, weight=1)
+
+        # --- Header Bar (White) ---
+        self.header_bar = ctk.CTkFrame(self.left_panel, height=56, corner_radius=0,
+                                        fg_color=COLORS["card"], border_width=0)
+        self.header_bar.grid(row=0, column=0, sticky="ew")
+        self.header_bar.grid_propagate(False)
         
-        # Logo Logic
+        # Bottom Separator for Header
+        header_separator = ctk.CTkFrame(self.left_panel, height=1, fg_color=COLORS["border"], corner_radius=0)
+        header_separator.grid(row=1, column=0, sticky="ew")
+        
         self.logo_img = None 
         try:
             logo_path = resource_path("Image/BSTPharma_Logo.png")
             if os.path.exists(logo_path):
                 pil_img = Image.open(logo_path)
-                # Resize to height 50, maintain aspect ratio
-                base_height = 50
+                base_height = 42
                 w_percent = (base_height / float(pil_img.size[1]))
                 w_size = int((float(pil_img.size[0]) * float(w_percent)))
-                
                 self.logo_img = ctk.CTkImage(light_image=pil_img, size=(w_size, base_height))
-                self.logo_label = ctk.CTkLabel(self.header_frame, text="", image=self.logo_img)
-                self.logo_label.pack(side="left", padx=20, pady=10)
+                ctk.CTkLabel(self.header_bar, text="", image=self.logo_img).pack(side="left", padx=(15, 12))
         except Exception as e:
             print(f"Logo load error: {e}")
 
-        # Title Group
-        self.header_text = ctk.CTkFrame(self.header_frame, fg_color="transparent")
-        self.header_text.pack(side="left", pady=10)
+        title_frame = ctk.CTkFrame(self.header_bar, fg_color="transparent")
+        title_frame.pack(side="left")
+        ctk.CTkLabel(title_frame, text="MUASAMCONG SCRAPER",
+                     font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+                     text_color=COLORS["primary_dark"]).pack(anchor="w")
+        ctk.CTkLabel(title_frame, text=f"{CURRENT_VERSION}",
+                     font=ctk.CTkFont(size=10), text_color=COLORS["text_secondary"]).pack(anchor="w")
 
-        self.header_label = ctk.CTkLabel(self.header_text, text="MUASAMCONG DATA SCRAPER", 
-                                       font=ctk.CTkFont(family="Roboto", size=20, weight="bold"))
-        self.header_label.pack(anchor="w")
+        # Status in header
+        status_frame = ctk.CTkFrame(self.header_bar, fg_color="transparent")
+        status_frame.pack(side="right", padx=15)
         
-        self.version_label = ctk.CTkLabel(self.header_text, text=f"{CURRENT_VERSION}", 
-                                        text_color="gray", font=ctk.CTkFont(size=12))
-        self.version_label.pack(anchor="w")
+        self.status_dot = ctk.CTkLabel(status_frame, text="●", font=ctk.CTkFont(size=12),
+                                       text_color=COLORS["success"])
+        self.status_dot.pack(side="left", padx=(0, 4))
+        self.status_label = ctk.CTkLabel(status_frame, text="Ready",
+                                         font=ctk.CTkFont(size=11, weight="bold"),
+                                         text_color=COLORS["text"])
+        self.status_label.pack(side="left", padx=(0, 10))
+        self.timer_label = ctk.CTkLabel(status_frame, text="00:00",
+                                        font=ctk.CTkFont(family="Consolas", size=11),
+                                        text_color=COLORS["text_secondary"])
+        self.timer_label.pack(side="left")
 
-        self.update_btn = ctk.CTkButton(self.header_frame, text="Check Updates", width=120, height=32,
-                                        fg_color="#2980B9", hover_color="#2471A3", text_color="white",
+        self.update_btn = ctk.CTkButton(self.header_bar, text="", height=28, width=28,
+                                        image=self.icon_lib.get_icon("update", 16, COLORS["text"], COLORS["text"]),
+                                        corner_radius=6,
+                                        fg_color=COLORS["surface"], hover_color=COLORS["border"],
+                                        text_color=COLORS["text"], font=ctk.CTkFont(size=12),
                                         command=self.check_for_updates_thread)
-        self.update_btn.pack(side="right", padx=20)
+        self.update_btn.pack(side="right", padx=(0, 5), pady=10)
 
-        # 2. Main Content Area
-        self.content_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.content_frame.grid(row=1, column=0, sticky="nsew", padx=25, pady=20)
-        self.content_frame.grid_columnconfigure(0, weight=1)
-        self.content_frame.grid_rowconfigure(2, weight=1)
-
-        # --- Settings Card ---
-        self.settings_card = ctk.CTkFrame(self.content_frame, corner_radius=10)
-        self.settings_card.grid(row=0, column=0, sticky="ew", pady=(0, 20))
-        self.settings_card.grid_columnconfigure(1, weight=1)
-
-        # Path Input
-        self.lbl_path = ctk.CTkLabel(self.settings_card, text="File Save Path:", font=ctk.CTkFont(weight="bold"))
-        self.lbl_path.grid(row=0, column=0, padx=20, pady=20, sticky="w")
+        # --- File Path Row ---
+        path_container = ctk.CTkFrame(self.left_panel, fg_color="transparent")
+        path_container.grid(row=2, column=0, sticky="ew", padx=12, pady=(10, 5))
+        
+        self.lbl_path = ctk.CTkLabel(path_container, text="Save Path:",
+                                     font=ctk.CTkFont(size=12, weight="bold"),
+                                     text_color=COLORS["text"])
+        self.lbl_path.pack(side="left", padx=(0, 8))
         
         default_path = os.path.join(os.getcwd(), "investors_data_detailed.xlsx")
-        self.path_entry = ctk.CTkEntry(self.settings_card, placeholder_text="Path to save .xlsx file", height=35)
-        self.path_entry.grid(row=0, column=1, padx=10, pady=20, sticky="ew")
+        self.path_entry = ctk.CTkEntry(path_container, placeholder_text="Path to .xlsx",
+                                       height=34, corner_radius=8,
+                                       fg_color=COLORS["input_bg"], border_color=COLORS["border"],
+                                       border_width=1, text_color=COLORS["text"],
+                                       font=ctk.CTkFont(size=11))
+        self.path_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         self.path_entry.insert(0, default_path)
 
-        self.browse_btn = ctk.CTkButton(self.settings_card, text="Browse", width=100, height=35, 
-                                      fg_color="#008A80", hover_color="#006960", text_color="white",
+        self.browse_btn = ctk.CTkButton(path_container, text=" Browse", width=75, height=34,
+                                      image=self.icon_lib.get_icon("folder", 16, "white", "white"),
+                                      corner_radius=8,
+                                      fg_color=COLORS["primary"], hover_color=COLORS["primary_dark"],
+                                      text_color="white", font=ctk.CTkFont(size=11, weight="bold"),
                                       command=self.browse_file)
-        self.browse_btn.grid(row=0, column=2, padx=20, pady=20)
+        self.browse_btn.pack(side="right")
 
-        # --- TABS for Filter ---
-        # --- TABS for Filter ---
-        self.tab_view = ctk.CTkTabview(self.settings_card, height=180, command=self.on_tab_change) # Increased height
-        self.tab_view.grid(row=1, column=0, columnspan=3, padx=20, pady=(0, 10), sticky="ew")
+        # --- Settings Tabs (Expanding Area) ---
+        # Dark teal tab bar → white text readable on all states, active tab pops
+        self.tab_view = ctk.CTkTabview(self.left_panel, command=self.on_tab_change,
+                                        fg_color=COLORS["card"],
+                                        segmented_button_fg_color="#004D40",
+                                        segmented_button_selected_color=COLORS["primary"],
+                                        segmented_button_selected_hover_color="#26A69A",
+                                        segmented_button_unselected_color="#004D40",
+                                        segmented_button_unselected_hover_color="#00695C",
+                                        corner_radius=8)
+        self.tab_view.grid(row=3, column=0, sticky="nsew", padx=10, pady=(0, 5))
         
-        # Increase size of Tab Buttons
-        self.tab_view._segmented_button.configure(font=ctk.CTkFont(family="Roboto", size=15, weight="bold"), height=40)
+        self.tab_view._segmented_button.configure(
+            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"), height=38,
+            text_color="#FFFFFF",
+            selected_color=COLORS["primary"],
+            selected_hover_color="#26A69A",
+            unselected_color="#004D40",
+            unselected_hover_color="#00695C",
+            corner_radius=6)
         
         self.tab_all = self.tab_view.add("Thông Tin Nhà Đầu Tư") # Merged Tab
         # self.tab_filter Removed
@@ -274,220 +372,325 @@ class ScraperApp(ctk.CTk):
         
         # --- Tab 2 Content (Contractor Results) ---
         self.contractor_frame = ctk.CTkFrame(self.tab_contractor, fg_color="transparent")
-        self.contractor_frame.pack(fill="both", padx=10, pady=5)
-        
-        self.contractor_mode_seg = ctk.CTkSegmentedButton(self.contractor_frame, values=["Tìm theo bộ lọc", "Tìm theo danh sách IB (Excel/Nhập)"], command=self.on_contractor_mode_change)
-        self.contractor_mode_seg.pack(fill="x", pady=(0, 10))
-        
+        self.contractor_frame.pack(fill="both", expand=True)
+
+        # Tab Segmented Button
+        top_bar = ctk.CTkFrame(self.contractor_frame, fg_color="transparent")
+        top_bar.pack(fill="x", padx=12, pady=(10, 5))
+        self.contractor_mode_seg = ctk.CTkSegmentedButton(top_bar, values=["Tìm theo bộ lọc", "Tìm theo danh sách IB (Excel/Nhập)"], command=self.on_contractor_mode_change)
+        self.contractor_mode_seg.pack(fill="x")
+
         # --- Mode 1: Filter Frame ---
         self.filter_frame = ctk.CTkFrame(self.contractor_frame, fg_color="transparent")
         
-        # Search Type Selection
-        ctk.CTkLabel(self.filter_frame, text="Loại tìm theo:", font=ctk.CTkFont(weight="bold")).pack(anchor="w")
+        # Section 1: Search Configuration
+        search_section = ctk.CTkFrame(self.filter_frame, fg_color=COLORS["surface"], corner_radius=8)
+        search_section.pack(fill="x", padx=12, pady=(5, 8))
+        
+        ctk.CTkLabel(search_section, text="Loại tìm theo:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLORS["text"]).pack(anchor="w", padx=12, pady=(10, 0))
         self.search_type_combo = ctk.CTkComboBox(
-            self.filter_frame,
-            values=[
-                "Thông báo mời thầu thuốc, dược liệu, vị thuốc cổ truyền",
-                "Thông báo mời thầu"
-            ],
-            state="readonly",
-            width=400
+            search_section,
+            values=["Thông báo mời thầu thuốc, dược liệu, vị thuốc cổ truyền", "Thông báo mời thầu"],
+            state="readonly", width=400, height=34, corner_radius=6,
+            fg_color=COLORS["card"], border_color=COLORS["border"], button_color=COLORS["primary"]
         )
-        self.search_type_combo.pack(fill="x", pady=(0, 10))
+        self.search_type_combo.pack(fill="x", padx=12, pady=(5, 10))
         self.search_type_combo.set("Thông báo mời thầu thuốc, dược liệu, vị thuốc cổ truyền")
         
-        ctk.CTkLabel(self.filter_frame, text="Từ khóa (mặc định):").pack(anchor="w")
-        self.entry_keywords = ctk.CTkEntry(self.filter_frame, height=30, placeholder_text="thuốc, generic, tân dược, biệt dược, bệnh viện, chữa bệnh, vật tư y tế, điều trị, bệnh nhân, thiết bị y tế, khám chữa bệnh, khám bệnh, chữa bệnh, dược liệu, dược")
-        self.entry_keywords.pack(fill="x", pady=(0, 5))
+        # Keywords Header with Auto-fill Button
+        kw_header = ctk.CTkFrame(search_section, fg_color="transparent")
+        kw_header.pack(fill="x", padx=12, pady=(0, 2))
         
-        ctk.CTkLabel(self.filter_frame, text="Loại trừ:").pack(anchor="w")
-        self.entry_exclude = ctk.CTkEntry(self.filter_frame, height=30, placeholder_text="linh kiện, xây dựng, cải tạo, lắp đặt, thi công")
-        self.entry_exclude.pack(fill="x", pady=(0, 5))
+        ctk.CTkLabel(kw_header, text="Từ khóa:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLORS["text"]).pack(side="left")
+        
+        def _fill_default_keywords():
+            self.entry_keywords.delete(0, "end")
+            self.entry_keywords.insert(0, "thuốc, generic, tân dược, biệt dược, bệnh viện, chữa bệnh, vật tư y tế, điều trị, bệnh nhân, thiết bị y tế, khám chữa bệnh, khám bệnh, chữa bệnh, dược liệu, dược")
+            self.entry_exclude.delete(0, "end")
+            self.entry_exclude.insert(0, "linh kiện, xây dựng, cải tạo, lắp đặt, thi công")
 
-        self.date_frame = ctk.CTkFrame(self.filter_frame, fg_color="transparent")
-        self.date_frame.pack(fill="x", pady=5)
+        self.btn_default_kw = ctk.CTkButton(
+            kw_header, text=" Bộ từ khóa mẫu", image=self.icon_lib.get_icon("bolt", 16, COLORS["primary_dark"], COLORS["primary_dark"]),
+            width=140, height=24, font=ctk.CTkFont(size=11, weight="bold"), corner_radius=4,
+            fg_color="#E0F2F1", hover_color="#B2DFDB",
+            text_color=COLORS["primary_dark"],
+            command=_fill_default_keywords
+        )
+        self.btn_default_kw.pack(side="right")
+
+        self.entry_keywords = ctk.CTkEntry(search_section, height=34, corner_radius=6, border_color=COLORS["border"], fg_color=COLORS["card"],
+            placeholder_text="Ví dụ: thuốc, generic, tân dược, bệnh viện...")
+        self.entry_keywords.pack(fill="x", padx=12, pady=(0, 10))
         
-        ctk.CTkLabel(self.date_frame, text="Từ ngày (dd/mm/yyyy):").pack(side="left", padx=(0, 5))
-        self.entry_from_date = ctk.CTkEntry(self.date_frame, width=100)
-        self.entry_from_date.pack(side="left", padx=(0, 10))
+        ctk.CTkLabel(search_section, text="Loại trừ:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLORS["text"]).pack(anchor="w", padx=12)
+        self.entry_exclude = ctk.CTkEntry(search_section, height=34, corner_radius=6, border_color=COLORS["border"], fg_color=COLORS["card"],
+            placeholder_text="Ví dụ: linh kiện, xây dựng, thi công...")
+        self.entry_exclude.pack(fill="x", padx=12, pady=(2, 12))
+
+        # Section 2: Date Range
+        date_section = ctk.CTkFrame(self.filter_frame, fg_color=COLORS["surface"], corner_radius=8)
+        date_section.pack(fill="x", padx=12, pady=(0, 8))
         
-        ctk.CTkLabel(self.date_frame, text="Đến ngày:").pack(side="left", padx=(0, 5))
-        self.entry_to_date = ctk.CTkEntry(self.date_frame, width=100)
+        ctk.CTkLabel(date_section, text="Khoảng thời gian", font=ctk.CTkFont(size=13, weight="bold"), text_color=COLORS["text"]).pack(anchor="w", padx=12, pady=(10, 8))
+        
+        self.date_frame = ctk.CTkFrame(date_section, fg_color="transparent")
+        self.date_frame.pack(fill="x", padx=12, pady=(0, 10))
+        
+        ctk.CTkLabel(self.date_frame, text="Từ ngày:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLORS["text"]).pack(side="left", padx=(0, 5))
+        self.entry_from_date = ctk.CTkEntry(self.date_frame, width=120, height=32, corner_radius=6, placeholder_text="dd/mm/yyyy", fg_color=COLORS["card"], border_color=COLORS["border"])
+        self.entry_from_date.pack(side="left", padx=(0, 15))
+        
+        ctk.CTkLabel(self.date_frame, text="Đến ngày:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLORS["text"]).pack(side="left", padx=(0, 5))
+        self.entry_to_date = ctk.CTkEntry(self.date_frame, width=120, height=32, corner_radius=6, placeholder_text="dd/mm/yyyy", fg_color=COLORS["card"], border_color=COLORS["border"])
         self.entry_to_date.pack(side="left")
 
+        # Note
         ctk.CTkLabel(self.filter_frame, text="* Tự động chọn Field: Hàng hóa, Search By: Thuốc/Dược liệu", 
-                     text_color="gray", font=ctk.CTkFont(size=11)).pack(anchor="w")
+                     text_color=COLORS["text_secondary"], font=ctk.CTkFont(size=11)).pack(anchor="w", padx=15, pady=(0, 5))
 
         # --- Mode 2: IB List Frame ---
         self.ib_frame = ctk.CTkFrame(self.contractor_frame, fg_color="transparent")
         
-        self.ib_action_frame = ctk.CTkFrame(self.ib_frame, fg_color="transparent")
-        self.ib_action_frame.pack(fill="x", pady=(0, 5))
-        ctk.CTkLabel(self.ib_action_frame, text="Nhập danh sách mã IB (ngăn cách bởi dấu phẩy):", font=ctk.CTkFont(weight="bold")).pack(side="left")
-        self.btn_upload_excel = ctk.CTkButton(self.ib_action_frame, text="Upload Excel (Cột IB)", width=150, height=28, command=self.upload_ib_excel, fg_color="#27AE60", hover_color="#1E8449")
+        ib_section = ctk.CTkFrame(self.ib_frame, fg_color=COLORS["surface"], corner_radius=8)
+        ib_section.pack(fill="x", padx=12, pady=(5, 8))
+
+        self.ib_action_frame = ctk.CTkFrame(ib_section, fg_color="transparent")
+        self.ib_action_frame.pack(fill="x", padx=12, pady=(12, 5))
+        ctk.CTkLabel(self.ib_action_frame, text="Danh sách mã IB (ngăn cách bởi dấu phẩy):", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLORS["text"]).pack(side="left")
+        self.btn_upload_excel = ctk.CTkButton(self.ib_action_frame, text=" Tải lên Excel", width=150, height=30,
+                                                image=self.icon_lib.get_icon("upload_file", 18, "white", "white"),
+                                                command=self.upload_ib_excel,
+                                                fg_color=COLORS["success"], hover_color="#1B5E20",
+                                                corner_radius=6, font=ctk.CTkFont(size=12, weight="bold"))
         self.btn_upload_excel.pack(side="right")
 
-        self.entry_ib_list = ctk.CTkTextbox(self.ib_frame, height=90, fg_color=("gray95", "#1E1E1E"))
-        self.entry_ib_list.pack(fill="x", pady=(0, 5))
-        ctk.CTkLabel(self.ib_frame, text="* Hỗ trợ tải lên file Excel có chứa cột mang tên 'IB' và lấy dữ liệu từng hàng.", 
-                     text_color="gray", font=ctk.CTkFont(size=11)).pack(anchor="w")
+        self.entry_ib_list = ctk.CTkTextbox(ib_section, height=120, fg_color=COLORS["card"],
+                                              border_width=1, border_color=COLORS["border"], corner_radius=6, text_color=COLORS["text"])
+        self.entry_ib_list.pack(fill="x", padx=12, pady=(0, 5))
+        ctk.CTkLabel(ib_section, text="* Hỗ trợ tải lên file Excel có chứa cột mang tên 'IB' và lấy dữ liệu từng hàng.", 
+                     text_color=COLORS["text_secondary"], font=ctk.CTkFont(size=11), justify="left").pack(anchor="w", padx=12, pady=(0, 12))
 
         self.contractor_mode_seg.set("Tìm theo bộ lọc")
         self.filter_frame.pack(fill="both", expand=True)
         
         # Tab 3 Content (Drug Price)
         self.drug_frame = ctk.CTkFrame(self.tab_drug, fg_color="transparent")
-        self.drug_frame.pack(fill="both", padx=10, pady=5)
+        self.drug_frame.pack(fill="both", expand=True)
+
+        drug_banner = ctk.CTkFrame(self.drug_frame, fg_color=COLORS["sidebar_bg"], corner_radius=8, height=40)
+        drug_banner.pack(fill="x", padx=12, pady=(10, 5))
+        ctk.CTkLabel(drug_banner, text="Thu Thập Dữ Liệu Giá Thuốc (dichvucong.dav.gov.vn)", 
+                     font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"), text_color="#FFFFFF").pack(padx=15, pady=10, fill="x")
+
+        drug_section = ctk.CTkFrame(self.drug_frame, fg_color=COLORS["surface"], corner_radius=8)
+        drug_section.pack(fill="x", padx=12, pady=(5, 8))
         
-        ctk.CTkLabel(self.drug_frame, text="Hệ thống sẽ cào dữ liệu từ dichvucong.dav.gov.vn", 
-                     font=ctk.CTkFont(size=13, weight="bold")).pack(pady=(10, 5))
-        
-        ctk.CTkLabel(self.drug_frame, text="Dữ liệu bao gồm: Tên thuốc, Hoạt chất, Giá kê khai, Cơ sở SX...", 
-                     text_color="gray").pack(pady=5)
+        ctk.CTkLabel(drug_section, text="Thông tin thu thập bao gồm:", font=ctk.CTkFont(weight="bold"), text_color=COLORS["text"]).pack(anchor="w", padx=15, pady=(15, 2))
+        ctk.CTkLabel(drug_section, text="• Tên thuốc  • Hoạt chất  • Giá kê khai  • Cơ sở sản xuất/đăng ký", 
+                     text_color=COLORS["text_secondary"], justify="left").pack(anchor="w", padx=25, pady=(0, 10))
                      
-        ctk.CTkLabel(self.drug_frame, text="* Lưu ý: Quá trình sẽ chạy tuần tự từ trang đầu đến hết.", 
-                     font=ctk.CTkFont(size=11, slant="italic"), text_color="#E67E22").pack(pady=10)
+        ctk.CTkLabel(drug_section, text="Lưu ý: Quá trình sẽ chạy tuần tự từ trang đầu đến hết.", 
+                     font=ctk.CTkFont(size=11, slant="italic", weight="bold"), text_color=COLORS["warning"]).pack(anchor="w", padx=15, pady=(0, 15))
         
         # Tab 4 Content (RFQ)
         self.rfq_frame = ctk.CTkFrame(self.tab_rfq, fg_color="transparent")
-        self.rfq_frame.pack(fill="both", padx=10, pady=5)
+        self.rfq_frame.pack(fill="both", expand=True)
+
+        rfq_banner = ctk.CTkFrame(self.rfq_frame, fg_color=COLORS["sidebar_bg"], corner_radius=8, height=40)
+        rfq_banner.pack(fill="x", padx=12, pady=(10, 5))
+        ctk.CTkLabel(rfq_banner, text="CHẾ ĐỘ: Thu thập dữ liệu Yêu Cầu Báo Giá", 
+                     font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"), text_color="#FFFFFF").pack(padx=15, pady=10, fill="x")
+
+        # Section 1: Keywords
+        rfq_search_section = ctk.CTkFrame(self.rfq_frame, fg_color=COLORS["surface"], corner_radius=8)
+        rfq_search_section.pack(fill="x", padx=12, pady=(5, 8))
         
-        ctk.CTkLabel(self.rfq_frame, text="Nhập mã/ tên yêu cầu báo giá (hoặc các từ khóa):").pack(anchor="w")
-        self.entry_rfq_keywords = ctk.CTkEntry(self.rfq_frame, height=30)
-        self.entry_rfq_keywords.pack(fill="x", pady=(0, 10))
+        ctk.CTkLabel(rfq_search_section, text="Mã/Tên yêu cầu báo giá (hoặc từ khóa):", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLORS["text"]).pack(anchor="w", padx=12, pady=(12, 2))
+        self.entry_rfq_keywords = ctk.CTkEntry(rfq_search_section, height=34, corner_radius=6, border_color=COLORS["border"], fg_color=COLORS["card"])
+        self.entry_rfq_keywords.pack(fill="x", padx=12, pady=(0, 15))
         self.entry_rfq_keywords.insert(0, "thuốc, generic, genegic")
         
-        # RFQ Date Range
-        self.rfq_date_frame = ctk.CTkFrame(self.rfq_frame, fg_color="transparent")
-        self.rfq_date_frame.pack(fill="x", pady=5)
+        # Section 2: Date Range
+        rfq_date_section = ctk.CTkFrame(self.rfq_frame, fg_color=COLORS["surface"], corner_radius=8)
+        rfq_date_section.pack(fill="x", padx=12, pady=(0, 8))
         
-        ctk.CTkLabel(self.rfq_date_frame, text="Từ ngày (dd/mm/yyyy):").pack(side="left", padx=(0, 5))
-        self.entry_rfq_from_date = ctk.CTkEntry(self.rfq_date_frame, width=100)
-        self.entry_rfq_from_date.pack(side="left", padx=(0, 10))
+        ctk.CTkLabel(rfq_date_section, text="Khoảng thời gian (Ngày hết hạn báo giá)", font=ctk.CTkFont(size=13, weight="bold"), text_color=COLORS["text"]).pack(anchor="w", padx=12, pady=(10, 8))
         
-        ctk.CTkLabel(self.rfq_date_frame, text="Đến ngày:").pack(side="left", padx=(0, 5))
-        self.entry_rfq_to_date = ctk.CTkEntry(self.rfq_date_frame, width=100)
+        self.rfq_date_frame = ctk.CTkFrame(rfq_date_section, fg_color="transparent")
+        self.rfq_date_frame.pack(fill="x", padx=12, pady=(0, 10))
+        
+        ctk.CTkLabel(self.rfq_date_frame, text="Từ ngày:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLORS["text"]).pack(side="left", padx=(0, 5))
+        self.entry_rfq_from_date = ctk.CTkEntry(self.rfq_date_frame, width=120, height=32, corner_radius=6, placeholder_text="dd/mm/yyyy", fg_color=COLORS["card"], border_color=COLORS["border"])
+        self.entry_rfq_from_date.pack(side="left", padx=(0, 15))
+        
+        ctk.CTkLabel(self.rfq_date_frame, text="Đến ngày:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLORS["text"]).pack(side="left", padx=(0, 5))
+        self.entry_rfq_to_date = ctk.CTkEntry(self.rfq_date_frame, width=120, height=32, corner_radius=6, placeholder_text="dd/mm/yyyy", fg_color=COLORS["card"], border_color=COLORS["border"])
         self.entry_rfq_to_date.pack(side="left")
         
-        ctk.CTkLabel(self.rfq_frame, text="Hệ thống sẽ tự động chọn:\n- Tìm Theo: Yêu Cầu Báo Giá\n- Từ khóa: Khớp từ hoặc một số từ (Phân biệt dấu)", 
-                     text_color="gray", font=ctk.CTkFont(size=11), justify="left").pack(anchor="w")
+        ctk.CTkLabel(self.rfq_frame, text="Hệ thống tự động chọn:\n• Tìm Theo: Yêu Cầu Báo Giá\n• Khớp từ hoặc một số từ (Phân biệt dấu)", 
+                     text_color=COLORS["text_secondary"], font=ctk.CTkFont(size=11), justify="left").pack(anchor="w", padx=15, pady=(0, 5))
         
-        # Merged Tab Content (Investor Search)
-        # Styled Info Box with Animated Gradient Border
-        self.info_border = AnimatedGradientBorderFrame(self.tab_all, border_width=2, corner_radius=8)
-        self.info_border.pack(fill="x", padx=20, pady=(5, 5))
+        # Merged Tab Content (Investor Search) - Modern Design
+        # Info Banner (Static, cleaner than animated)
+        self.info_banner = ctk.CTkFrame(self.tab_all, fg_color=COLORS["sidebar_bg"],
+                                         corner_radius=8, height=40)
+        self.info_banner.pack(fill="x", padx=12, pady=(8, 10))
         
-        # Inner Frame (Animated Gradient Background - Contrast Safe)
-        # Using cool colors (Green/Blue/Purple) to keep White text readable
-        inner_colors = [(39, 174, 96), (41, 128, 185), (142, 68, 173), (44, 62, 80)]
-        self.info_inner = AnimatedGradientBorderFrame(self.info_border, colors=inner_colors, corner_radius=6)
-        self.info_inner.pack(padx=3, pady=3, fill="both") # Padding acts as border width
+        self.lbl_investor_desc = ctk.CTkLabel(self.info_banner, text="", 
+                                            text_color="#FFFFFF",
+                                            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
+                                            wraplength=600, justify="center")
+        self.lbl_investor_desc.pack(padx=15, pady=8, fill="x")
         
-        # Label with White Text, Centered
-        self.lbl_investor_desc = ctk.CTkLabel(self.info_inner, text="", 
-                                            text_color="#FFFFFF", # White
-                                            font=ctk.CTkFont(family="Roboto", size=14, weight="bold"),
-                                            wraplength=1100, justify="center")
-        self.lbl_investor_desc.pack(padx=10, pady=5, anchor="center")
+        # --- Section: Bộ Ngành Selection ---
+        ministry_section = ctk.CTkFrame(self.tab_all, fg_color=COLORS["surface"],
+                                         corner_radius=8)
+        ministry_section.pack(fill="x", padx=12, pady=(0, 8))
         
-        self.ministry_frame = ctk.CTkFrame(self.tab_all, fg_color="transparent")
-        self.ministry_frame.pack(fill="x", padx=20, pady=5)
+        ministry_header = ctk.CTkFrame(ministry_section, fg_color="transparent")
+        ministry_header.pack(fill="x", padx=12, pady=(10, 8))
+        
+        ctk.CTkLabel(ministry_header, text="Bộ Ngành",
+                     font=ctk.CTkFont(size=13, weight="bold"),
+                     text_color=COLORS["text"]).pack(side="left")
+        
+        self.chk_sequential = ctk.CTkCheckBox(ministry_header, text="Chạy tuần tự tiếp theo",
+                                               command=self.update_mode_desc,
+                                               font=ctk.CTkFont(size=11),
+                                               text_color=COLORS["text"],
+                                               fg_color=COLORS["primary"],
+                                               hover_color=COLORS["primary_dark"],
+                                               border_color=COLORS["border"])
+        self.chk_sequential.pack(side="right")
         
         self.ministries_list = ["Tất cả (Chạy toàn bộ)", "Bộ Y tế", "Bộ Quốc phòng", "Bộ Công an"]
         
-        ctk.CTkLabel(self.ministry_frame, text="Bộ Ngành:", font=ctk.CTkFont(family="Roboto", weight="bold")).pack(side="left")
-
-        # Investor Date Range
-        self.investor_date_frame = ctk.CTkFrame(self.tab_all, fg_color="transparent")
-        self.investor_date_frame.pack(fill="x", padx=20, pady=5)
-        
-        ctk.CTkLabel(self.investor_date_frame, text="Từ ngày (dd/mm/yyyy):").pack(side="left", padx=(0, 5))
-        self.entry_investor_from = ctk.CTkEntry(self.investor_date_frame, width=100)
-        self.entry_investor_from.pack(side="left", padx=(0, 10))
-        
-        ctk.CTkLabel(self.investor_date_frame, text="Đến ngày:").pack(side="left", padx=(0, 5))
-        self.entry_investor_to = ctk.CTkEntry(self.investor_date_frame, width=100)
-        self.entry_investor_to.pack(side="left")
+        self.ministry_frame = ctk.CTkFrame(ministry_section, fg_color="transparent")
+        self.ministry_frame.pack(fill="x", padx=12, pady=(0, 10))
         
         self.combo_ministry = ctk.CTkComboBox(self.ministry_frame, values=self.ministries_list, 
-                                            width=220, state="readonly", command=self.update_mode_desc)
-        self.combo_ministry.pack(side="left", padx=10)
+                                            width=280, state="readonly", command=self.update_mode_desc,
+                                            height=34, corner_radius=8,
+                                            fg_color=COLORS["card"], border_color=COLORS["border"],
+                                            border_width=1, text_color=COLORS["text"],
+                                            button_color=COLORS["primary"],
+                                            button_hover_color=COLORS["primary_dark"],
+                                            dropdown_fg_color=COLORS["card"],
+                                            dropdown_text_color=COLORS["text"],
+                                            dropdown_hover_color=COLORS["primary_light"],
+                                            font=ctk.CTkFont(size=12))
+        self.combo_ministry.pack(side="left")
         self.combo_ministry.set("Tất cả (Chạy toàn bộ)")
+
+        # --- Section: Date Range ---
+        date_section = ctk.CTkFrame(self.tab_all, fg_color=COLORS["surface"],
+                                     corner_radius=8)
+        date_section.pack(fill="x", padx=12, pady=(0, 8))
         
-        self.chk_sequential = ctk.CTkCheckBox(self.ministry_frame, text="Chạy tuần tự tiếp theo", command=self.update_mode_desc)
-        self.chk_sequential.pack(side="left", padx=20)
+        ctk.CTkLabel(date_section, text="Khoảng thời gian",
+                     font=ctk.CTkFont(size=13, weight="bold"),
+                     text_color=COLORS["text"]).pack(anchor="w", padx=12, pady=(10, 8))
+        
+        self.investor_date_frame = ctk.CTkFrame(date_section, fg_color="transparent")
+        self.investor_date_frame.pack(fill="x", padx=12, pady=(0, 10))
+        
+        ctk.CTkLabel(self.investor_date_frame, text="Từ ngày:",
+                     font=ctk.CTkFont(size=11, weight="bold"),
+                     text_color=COLORS["text"]).pack(side="left", padx=(0, 5))
+        self.entry_investor_from = ctk.CTkEntry(self.investor_date_frame, width=120, height=32,
+                                                 corner_radius=6, placeholder_text="dd/mm/yyyy",
+                                                 fg_color=COLORS["card"], border_color=COLORS["border"],
+                                                 border_width=1, text_color=COLORS["text"],
+                                                 font=ctk.CTkFont(size=11))
+        self.entry_investor_from.pack(side="left", padx=(0, 15))
+        
+        ctk.CTkLabel(self.investor_date_frame, text="Đến ngày:",
+                     font=ctk.CTkFont(size=11, weight="bold"),
+                     text_color=COLORS["text"]).pack(side="left", padx=(0, 5))
+        self.entry_investor_to = ctk.CTkEntry(self.investor_date_frame, width=120, height=32,
+                                               corner_radius=6, placeholder_text="dd/mm/yyyy",
+                                               fg_color=COLORS["card"], border_color=COLORS["border"],
+                                               border_width=1, text_color=COLORS["text"],
+                                               font=ctk.CTkFont(size=11))
+        self.entry_investor_to.pack(side="left")
         
         # Initial UI State
         self.update_mode_desc()
 
 
 
-        # --- Action Section (Button & Progress) ---
-        self.action_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
-        self.action_frame.grid(row=1, column=0, sticky="ew", pady=(0, 20))
+        # --- Action Buttons (Bottom Left) ---
+        self.action_frame = ctk.CTkFrame(self.left_panel, fg_color="transparent")
+        self.action_frame.grid(row=4, column=0, sticky="ew", padx=15, pady=(10, 15))
         
-        # Grid configuration for buttons
-        self.action_frame.grid_columnconfigure(0, weight=2) # Start (50%)
-        self.action_frame.grid_columnconfigure(1, weight=1) # Pause (25%)
-        self.action_frame.grid_columnconfigure(2, weight=1) # Reset (25%)
+        self.action_frame.grid_columnconfigure(0, weight=2)
+        self.action_frame.grid_columnconfigure(1, weight=1)
+        self.action_frame.grid_columnconfigure(2, weight=1)
 
-        self.start_btn = ctk.CTkButton(self.action_frame, text="START SCRAPING", height=50,
-                                       font=ctk.CTkFont(size=16, weight="bold"),
-                                       fg_color="#008A80", hover_color="#006960", text_color="white", corner_radius=6,
+        self.start_btn = ctk.CTkButton(self.action_frame, text=" BẮT ĐẦU SCRAPING", height=46,
+                                       image=self.icon_lib.get_icon("play_arrow", 18, "white", "white"),
+                                       font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+                                       fg_color=COLORS["primary"], hover_color=COLORS["primary_dark"],
+                                       text_color="white", corner_radius=10,
                                        command=self.start_scraping)
         self.start_btn.grid(row=0, column=0, sticky="ew", padx=(0, 5))
 
-        self.pause_btn = ctk.CTkButton(self.action_frame, text="PAUSE ⏸", height=50,
-                                       font=ctk.CTkFont(size=16, weight="bold"),
-                                       fg_color="#E67E22", hover_color="#D35400", text_color="white", corner_radius=6,
+        self.pause_btn = ctk.CTkButton(self.action_frame, text=" TẠM DỪNG", height=46,
+                                       image=self.icon_lib.get_icon("pause", 18, "white", "white"),
+                                       font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+                                       fg_color=COLORS["warning"], hover_color="#E65100",
+                                       text_color="white", corner_radius=10,
                                        state="disabled",
                                        command=self.toggle_pause)
-        self.pause_btn.grid(row=0, column=1, sticky="ew", padx=(5, 5))
+        self.pause_btn.grid(row=0, column=1, sticky="ew", padx=5)
         
-        self.reset_btn = ctk.CTkButton(self.action_frame, text="RESET ⟳", height=50,
-                                       font=ctk.CTkFont(size=16, weight="bold"),
-                                       fg_color="#7F8C8D", hover_color="#95A5A6", text_color="white", corner_radius=6,
+        self.reset_btn = ctk.CTkButton(self.action_frame, text=" LÀM LẠI", height=46,
+                                       image=self.icon_lib.get_icon("autorenew", 18, COLORS["text"], COLORS["text"]),
+                                       font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+                                       fg_color=COLORS["border"], hover_color=COLORS["card_hover"],
+                                       text_color=COLORS["text"], corner_radius=10,
                                        command=self.reset_click_handler)
         self.reset_btn.grid(row=0, column=2, sticky="ew", padx=(5, 0))
 
-        # Modern Progress Bar
-        self.progress_bar = ctk.CTkProgressBar(self.action_frame, height=14, corner_radius=7, 
-                                             progress_color="#008A80", 
-                                             fg_color="#ECF0F1", 
+        # Progress Bar
+        self.progress_bar = ctk.CTkProgressBar(self.action_frame, height=8, corner_radius=4, 
+                                             progress_color=COLORS["accent"], 
+                                             fg_color=COLORS["primary_light"], 
                                              border_width=0)
-        # Grid it later
-        # Grid it later
-        # Pack later when running
+        # Grid it later when running
 
-        # --- Log Section ---
-        self.log_frame = ctk.CTkFrame(self.content_frame, corner_radius=10)
-        self.log_frame.grid(row=2, column=0, sticky="nsew")
+        # === RIGHT PANEL (Execution Logs) ===
+        self.log_frame = ctk.CTkFrame(self, corner_radius=0,
+                                      fg_color=COLORS["card"], border_width=0)
+        self.log_frame.grid(row=0, column=1, sticky="nsew")
         self.log_frame.grid_rowconfigure(1, weight=1)
         self.log_frame.grid_columnconfigure(0, weight=1)
         
-        self.log_header = ctk.CTkLabel(self.log_frame, text="Execution Logs", font=ctk.CTkFont(size=14, weight="bold"))
-        self.log_header.grid(row=0, column=0, padx=15, pady=10, sticky="w")
+        # Log header bar
+        log_header_frame = ctk.CTkFrame(self.log_frame, fg_color="transparent")
+        log_header_frame.grid(row=0, column=0, padx=15, pady=(12, 5), sticky="ew")
+        log_header_frame.grid_columnconfigure(0, weight=1)
         
-        self.log_area = ctk.CTkTextbox(self.log_frame, font=("Consolas", 12), fg_color=("gray95", "#1E1E1E"))
-        self.log_area.grid(row=1, column=0, padx=15, pady=(0, 15), sticky="nsew")
+        self.log_header = ctk.CTkLabel(log_header_frame, text="Execution Logs",
+                                       font=ctk.CTkFont(size=14, weight="bold"),
+                                       text_color=COLORS["text"])
+        self.log_header.grid(row=0, column=0, sticky="w")
+        
+        self.clear_log_btn = ctk.CTkButton(log_header_frame, text=" Clear", width=60, height=26,
+                                            image=self.icon_lib.get_icon("delete", 14, COLORS["text_secondary"], COLORS["text_secondary"]),
+                                            corner_radius=6,
+                                            fg_color=COLORS["surface"], hover_color=COLORS["border"],
+                                            text_color=COLORS["text_secondary"],
+                                            font=ctk.CTkFont(size=11),
+                                            command=self.clear_logs)
+        self.clear_log_btn.grid(row=0, column=1, sticky="e")
+        
+        self.log_area = ctk.CTkTextbox(self.log_frame, font=("Consolas", 12),
+                                       fg_color=COLORS["log_bg"],
+                                       text_color=COLORS["log_text"],
+                                       corner_radius=8)
+        self.log_area.grid(row=1, column=0, padx=12, pady=(0, 12), sticky="nsew")
         self.log_area.configure(state="disabled")
-
-        # 3. Footer Area
-        self.footer_frame = ctk.CTkFrame(self, height=30, fg_color="transparent")
-        self.footer_frame.grid(row=2, column=0, sticky="ew", padx=25, pady=10)
-        
-        self.status_frame = ctk.CTkFrame(self.footer_frame, fg_color="transparent")
-        self.status_frame.pack(side="left", fill="y")
-
-        self.status_label = ctk.CTkLabel(self.status_frame, text="Status: Ready", font=ctk.CTkFont(size=12, weight="bold"))
-        self.status_label.pack(side="left")
-        
-        self.timer_label = ctk.CTkLabel(self.status_frame, text="00:00", font=ctk.CTkFont(family="Consolas", size=12))
-        self.timer_label.pack(side="right", padx=10)
-
-        self.footer_branding = ctk.CTkLabel(self.footer_frame, text="Made with ❤️ by Boston Pharma", 
-                                          font=ctk.CTkFont(size=12, slant="italic"), text_color="gray")
-        self.footer_branding.pack(side="right")
 
         # System Redirects
         sys.stdout = self
@@ -621,18 +824,23 @@ class ScraperApp(ctk.CTk):
     def flush(self):
         pass
 
+    def clear_logs(self):
+        self.log_area.configure(state="normal")
+        self.log_area.delete("0.0", tk.END)
+        self.log_area.configure(state="disabled")
+
     def toggle_pause(self):
         if self.pause_event.is_set():
             self.pause_event.clear()
-            # Now Paused -> Show Resume Option
-            self.pause_btn.configure(text="RESUME ▶", fg_color="#C0392B", hover_color="#922B21", text_color="white") # Dark Red
-            self.status_label.configure(text="Status: Paused ⏸")
+            self.pause_btn.configure(text=" TIẾP TỤC", image=self.icon_lib.get_icon("play_arrow", 18, "white", "white"), fg_color=COLORS["danger"], hover_color="#B71C1C")
+            self.status_label.configure(text="Paused", text_color=COLORS["warning"])
+            self.status_dot.configure(text_color=COLORS["warning"])
             print(">>> Signal: PAUSE")
         else:
             self.pause_event.set()
-            # Now Running -> Show Pause Option
-            self.pause_btn.configure(text="PAUSE ⏸", fg_color="#E67E22", hover_color="#D35400", text_color="white") # Deep Orange
-            self.status_label.configure(text="Status: Resumed ▶")
+            self.pause_btn.configure(text=" TẠM DỪNG", image=self.icon_lib.get_icon("pause", 18, "white", "white"), fg_color=COLORS["warning"], hover_color="#E65100")
+            self.status_label.configure(text="Resumed", text_color=COLORS["success"])
+            self.status_dot.configure(text_color=COLORS["success"])
             print(">>> Signal: RESUME")
 
     def start_scraping(self):
@@ -695,10 +903,11 @@ class ScraperApp(ctk.CTk):
 
 
         # UI Updates
-        self.start_btn.configure(state="disabled", text="RUNNING...", fg_color="#5D6D7E")
-        self.pause_btn.configure(state="normal", text="PAUSE ⏸", fg_color="#E67E22", text_color="white")
+        self.start_btn.configure(state="disabled", text=" ĐANG CHẠY...", image=self.icon_lib.get_icon("autorenew", 18, "white", "white"), fg_color=COLORS["surface_light"])
+        self.pause_btn.configure(state="normal", text=" TẠM DỪNG", image=self.icon_lib.get_icon("pause", 18, "white", "white"), fg_color=COLORS["warning"])
         self.path_entry.configure(state="disabled")
-        self.status_label.configure(text="Status: Scraping in progress...", text_color="#E67E22")
+        self.status_label.configure(text="Scraping in progress...", text_color=COLORS["warning"])
+        self.status_dot.configure(text_color=COLORS["warning"])
         
         # Start Timer
         self.timer_running = True
@@ -800,7 +1009,8 @@ class ScraperApp(ctk.CTk):
                 )
                 print("\n>>> COMPLETED SUCCESSFULLY!")
                 self.timer_running = False
-                self.status_label.configure(text="Status: Completed ✅")
+                self.status_label.configure(text="Completed", text_color=COLORS["success"])
+                self.status_dot.configure(text_color=COLORS["success"])
                 messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
                 return
             elif mode == "CONTRACTOR_IB":
@@ -812,7 +1022,8 @@ class ScraperApp(ctk.CTk):
                 )
                 print("\n>>> COMPLETED SUCCESSFULLY!")
                 self.timer_running = False
-                self.status_label.configure(text="Status: Completed ✅")
+                self.status_label.configure(text="Completed", text_color=COLORS["success"])
+                self.status_dot.configure(text_color=COLORS["success"])
                 messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
                 return
             elif mode == "DRUG_PRICE":
@@ -823,7 +1034,8 @@ class ScraperApp(ctk.CTk):
                 )
                 print("\n>>> COMPLETED SUCCESSFULLY!")
                 self.timer_running = False
-                self.status_label.configure(text="Status: Completed ✅")
+                self.status_label.configure(text="Completed", text_color=COLORS["success"])
+                self.status_dot.configure(text_color=COLORS["success"])
                 messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
                 return
             elif mode == "RFQ":
@@ -837,7 +1049,8 @@ class ScraperApp(ctk.CTk):
                 )
                 print("\n>>> COMPLETED SUCCESSFULLY!")
                 self.timer_running = False
-                self.status_label.configure(text="Status: Completed ✅")
+                self.status_label.configure(text="Completed", text_color=COLORS["success"])
+                self.status_dot.configure(text_color=COLORS["success"])
                 messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
                 return
             else:
@@ -889,7 +1102,8 @@ class ScraperApp(ctk.CTk):
                 
             print("\n>>> COMPLETED SUCCESSFULLY!")
             self.timer_running = False
-            self.status_label.configure(text="Status: Completed ✅")
+            self.status_label.configure(text="Completed", text_color=COLORS["success"])
+            self.status_dot.configure(text_color=COLORS["success"])
             messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
             return 
             
@@ -897,20 +1111,23 @@ class ScraperApp(ctk.CTk):
             print("-" * 50)
             
             print("\n>>> COMPLETED SUCCESSFULLY!")
-            self.timer_running = False # Stop timer immediately
-            self.status_label.configure(text="Status: Completed ✅")
+            self.timer_running = False # Stop timer
+            self.status_label.configure(text="Completed", text_color=COLORS["success"])
+            self.status_dot.configure(text_color=COLORS["success"])
             messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
             
         except InterruptedError:
             self.timer_running = False # Stop timer
             print("\n>>> PROCESS STOPPED BY USER.")
-            self.status_label.configure(text="Status: Stopped 🛑", text_color="gray")
+            self.status_label.configure(text="Stopped 🛑", text_color=COLORS["text_secondary"])
+            self.status_dot.configure(text_color=COLORS["text_secondary"])
             # No error popup for manual stop
             
         except Exception as e:
             self.timer_running = False # Stop timer
             print(f"\n>>> ERROR: {e}")
-            self.status_label.configure(text="Status: Error ❌", text_color="red")
+            self.status_label.configure(text="Error", text_color=COLORS["danger"])
+            self.status_dot.configure(text_color=COLORS["danger"])
             messagebox.showerror("Error", f"An error occurred:\n{e}")
         finally:
             elapsed_time = time.time() - start_time
@@ -922,17 +1139,16 @@ class ScraperApp(ctk.CTk):
             self.after(0, self.reset_ui)
 
     def reset_ui(self):
-        self.start_btn.configure(state="normal", text="START SCRAPING", fg_color="#008A80")
-        self.pause_btn.configure(state="disabled", text="PAUSE ⏸", fg_color="#E67E22", text_color="white")
-        self.pause_event.set() # Reset to True
+        self.start_btn.configure(state="normal", text=" BẮT ĐẦU SCRAPING", image=self.icon_lib.get_icon("play_arrow", 18, "white", "white"), fg_color=COLORS["primary"])
+        self.pause_btn.configure(state="disabled", text=" TẠM DỪNG", image=self.icon_lib.get_icon("pause", 18, "white", "white"), fg_color=COLORS["warning"])
+        self.pause_event.set()
         self.path_entry.configure(state="normal")
-        self.tab_view.configure(state="normal") # Enable tabs
+        self.tab_view.configure(state="normal")
         
-        # Stop Progress
         self.progress_bar.stop()
         self.progress_bar.grid_forget()
         
-        self.timer_running = False # Stop Timer Loop
+        self.timer_running = False
 
     def update_timer(self):
         if self.timer_running:
@@ -944,7 +1160,7 @@ class ScraperApp(ctk.CTk):
             else:
                 time_str = f"{m:02}:{s:02}"
             
-            self.timer_label.configure(text=f"⏱ {time_str}")
+            self.timer_label.configure(text=f"{time_str}")
             self.after(1000, self.update_timer)
 
     def reset_click_handler(self):
@@ -955,7 +1171,8 @@ class ScraperApp(ctk.CTk):
                 # Signal Stop
                 self.stop_event.set()
                 self.pause_event.set() # Unpause to allow exit
-                self.status_label.configure(text="Status: Stopping...", text_color="red")
+                self.status_label.configure(text="Stopping...", text_color=COLORS["danger"])
+                self.status_dot.configure(text_color=COLORS["danger"])
                 
                 # We can't immediately reset UI because thread is still winding down.
                 # But for UX, we can just reset inputs. Thread will die eventually.
@@ -988,7 +1205,8 @@ class ScraperApp(ctk.CTk):
         self.log_area.delete("0.0", tk.END)
         self.log_area.configure(state="disabled")
         
-        self.status_label.configure(text="Status: Reset to Defaults.", text_color="gray")
+        self.status_label.configure(text="Reset to Defaults", text_color=COLORS["text_secondary"])
+        self.status_dot.configure(text_color=COLORS["text_secondary"])
 
     # --- UPDATE LOGIC ---
     def check_for_updates_thread(self):
@@ -1021,14 +1239,14 @@ class ScraperApp(ctk.CTk):
                     else:
                         print("No EXE asset found in release.")
                 else:
-                    self.after(0, lambda: self.update_btn.configure(text="Latest Version ✅", fg_color="#27AE60"))
+                    self.after(0, lambda: self.update_btn.configure(text="OK", fg_color=COLORS["success"]))
                     print("You are using the latest version.")
         except Exception as e:
             print(f"Update check failed: {e}")
 
     def indicate_update_found(self, version, url):
         # Change button to Red Alert
-        self.update_btn.configure(text=f"UPDATE {version} 🔔", fg_color="#C0392B", hover_color="#922B21")
+        self.update_btn.configure(text=f"🔔 UPDATE {version}", fg_color=COLORS["danger"], hover_color="#B71C1C")
         # Prompt user
         self.prompt_update(version, url)
 
