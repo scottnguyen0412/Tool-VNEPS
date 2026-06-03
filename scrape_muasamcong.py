@@ -13,6 +13,7 @@ import ssl
 from requests.adapters import HTTPAdapter
 from urllib3.util.ssl_ import create_urllib3_context
 from urllib3.poolmanager import PoolManager
+from bs4 import BeautifulSoup  # type: ignore
 
 os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
 
@@ -2467,5 +2468,163 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
         finalize_excel({target_sheet: csv_path}, output_path)
 
 
+# ═══════════════════════════════════════════════════════════════
+# Bệnh Án Điện Tử - Cào danh sách bệnh viện từ MOH
+# ═══════════════════════════════════════════════════════════════
+
+def _get_total_pages(soup):
+    """Tự động tìm số trang cuối cùng từ giao diện pagination."""
+    try:
+        pagination_links = soup.select('.pagination li a')
+        if not pagination_links:
+            return 1
+
+        pages = []
+        for link in pagination_links:
+            text = link.text.strip()
+            nums = re.findall(r'\d+', text)
+            if nums:
+                pages.append(int(nums[-1]))
+
+        return max(pages) if pages else 1
+    except Exception:
+        return 1
 
 
+def run_hospital_scrape(output_folder, pause_event=None, stop_event=None):
+    """
+    Cào danh sách bệnh viện từ https://benhandientu.moh.gov.vn/danh-sach-benh-vien
+    - output_folder: thư mục gốc user chọn
+    - Tạo temp/ bên trong chứa CSV tạm
+    - Khi hoàn thành convert sang Excel: Benh_AN_Dien_TU_<timestamp>.xlsx
+    """
+
+    base_url = "https://benhandientu.moh.gov.vn/danh-sach-benh-vien"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
+    # --- Helpers ---
+    def check_status():
+        if stop_event and stop_event.is_set():
+            raise InterruptedError("Stopped by user.")
+        if pause_event and not pause_event.is_set():
+            print(">>> PAUSED...")
+            pause_event.wait()
+            if stop_event and stop_event.is_set():
+                raise InterruptedError("Stopped by user.")
+            print(">>> RESUMED.")
+
+    # --- Temp directory ---
+    temp_dir = os.path.join(output_folder, "temp")
+    os.makedirs(temp_dir, exist_ok=True)
+    csv_path = os.path.join(temp_dir, "Benh_An_Dien_Tu.csv")
+
+    # --- Timestamp for final Excel filename ---
+    now_str = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
+    excel_filename = f"Benh_An_Dien_Tu_{now_str}.xlsx"
+    excel_path = os.path.join(output_folder, excel_filename)
+
+    print(f"--- Bắt đầu cào Bệnh Án Điện Tử ---")
+    print(f"Nguồn: {base_url}")
+    print(f"Thư mục lưu: {output_folder}")
+    print(f"CSV tạm: {csv_path}")
+    print(f"File Excel: {excel_path}")
+
+
+
+    # --- Bước 1: Truy cập trang 1 để lấy tổng số trang ---
+    print("Đang kiểm tra tổng số trang...")
+    check_status()
+
+    try:
+        first_res = requests.get(base_url, headers=headers, timeout=15)
+        first_soup = BeautifulSoup(first_res.content, 'html.parser')
+        total_pages = _get_total_pages(first_soup)
+    except Exception as e:
+        print(f"Lỗi khi truy cập trang đầu: {e}")
+        return
+
+    print(f"Phát hiện hệ thống có tổng cộng: {total_pages} trang.")
+
+    # --- Bước 2: Lặp qua từng trang ---
+    all_data = []
+    batch_buffer = []
+    total_new = 0
+
+    for page in range(1, total_pages + 1):
+        check_status()
+
+        print(f"Đang lấy dữ liệu trang {page}/{total_pages}...")
+        try:
+            res = requests.get(f"{base_url}?page={page}", headers=headers, timeout=15)
+            soup = BeautifulSoup(res.content, 'html.parser')
+            cards = soup.select('.product-card')
+
+            for card in cards:
+                name = card.select_one('.product-card__name')
+                name = name.text.strip() if name else ""
+
+                address = card.select_one('.product-card__sub-title')
+                address = address.text.strip() if address else ""
+
+                labels = card.select('.product-datasets-info .product-datasets__label')
+                province = labels[0].text.strip() if len(labels) > 0 else ""
+                rank = labels[1].text.strip() if len(labels) > 1 else ""
+
+                scale_el = card.select_one('.quy-mo')
+                scale = scale_el.text.strip() if scale_el else ""
+
+                type_hosp = ""
+                level_hosp = ""
+                extra_info = card.select('.product-datasets span')
+                for span in extra_info:
+                    txt = span.text.strip()
+                    if "Loại hình :" in txt:
+                        type_hosp = txt.replace("Loại hình :", "").strip()
+                    if "Cấp bệnh viện :" in txt:
+                        level_hosp = txt.replace("Cấp bệnh viện :", "").strip()
+
+
+
+                row = {
+                    "Tên bệnh viện": name,
+                    "Địa chỉ": address,
+                    "Tỉnh thành": province,
+                    "Hạng bệnh viện": rank,
+                    "Quy mô": scale,
+                    "Loại hình": type_hosp,
+                    "Cấp quản lý": level_hosp
+                }
+                batch_buffer.append(row)
+                all_data.append(row)
+
+                total_new += 1
+
+            # Batch save every 100 records
+            if len(batch_buffer) >= 100:
+                save_batch_csv(batch_buffer, csv_path)
+                print(f"  >> Đã lưu batch {len(batch_buffer)} records vào CSV tạm.")
+                batch_buffer = []
+
+            time.sleep(0.3)  # Nghỉ ngắn tránh quá tải server
+
+        except InterruptedError:
+            raise
+        except Exception as e:
+            print(f"Lỗi tại trang {page}: {e}")
+
+    # --- Lưu batch cuối ---
+    if batch_buffer:
+        save_batch_csv(batch_buffer, csv_path)
+        print(f"  >> Đã lưu batch cuối {len(batch_buffer)} records.")
+
+    print(f"\nTổng cộng: {total_new} bệnh viện mới được thu thập.")
+
+    # --- Convert CSV → Excel ---
+    if os.path.exists(csv_path):
+        finalize_excel({"Danh Sách Bệnh Viện": csv_path}, excel_path)
+        print(f"✓ Đã lưu thành công vào: {excel_path}")
+    else:
+        print("Không có dữ liệu CSV để chuyển đổi.")

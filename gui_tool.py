@@ -51,7 +51,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Sửa mỗi khi release
-CURRENT_VERSION = "v2.0.7"
+CURRENT_VERSION = "v2.0.8"
 REPO_OWNER = "scottnguyen0412"
 REPO_NAME = "Tool-VNEPS"
 
@@ -369,6 +369,7 @@ class ScraperApp(ctk.CTk):
         self.tab_contractor = self.tab_view.add("Kết Quả Đấu Thầu") # Tab 2
         self.tab_rfq = self.tab_view.add("Yêu cầu báo giá") # Tab 4
         self.tab_drug = self.tab_view.add("Công bố giá thuốc") # Tab 3
+        self.tab_hospital = self.tab_view.add("Bệnh Án Điện Tử") # Tab 5
         
         # --- Tab 2 Content (Contractor Results) ---
         self.contractor_frame = ctk.CTkFrame(self.tab_contractor, fg_color="transparent")
@@ -491,6 +492,57 @@ class ScraperApp(ctk.CTk):
                      
         ctk.CTkLabel(drug_section, text="Lưu ý: Quá trình sẽ chạy tuần tự từ trang đầu đến hết.", 
                      font=ctk.CTkFont(size=11, slant="italic", weight="bold"), text_color=COLORS["warning"]).pack(anchor="w", padx=15, pady=(0, 15))
+
+        # Tab 5 Content (Hospital - Bệnh Án Điện Tử)
+        self.hospital_frame = ctk.CTkFrame(self.tab_hospital, fg_color="transparent")
+        self.hospital_frame.pack(fill="both", expand=True)
+
+        hospital_banner = ctk.CTkFrame(self.hospital_frame, fg_color=COLORS["sidebar_bg"], corner_radius=8, height=40)
+        hospital_banner.pack(fill="x", padx=12, pady=(10, 5))
+        ctk.CTkLabel(hospital_banner, text="Thu Thập Dữ Liệu Danh Sách Bệnh Viện (benhandientu.moh.gov.vn)", 
+                     font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"), text_color="#FFFFFF").pack(padx=15, pady=10, fill="x")
+
+        hospital_section = ctk.CTkFrame(self.hospital_frame, fg_color=COLORS["surface"], corner_radius=8)
+        hospital_section.pack(fill="x", padx=12, pady=(5, 8))
+
+        ctk.CTkLabel(hospital_section, text="Thông tin thu thập bao gồm:", font=ctk.CTkFont(weight="bold"), text_color=COLORS["text"]).pack(anchor="w", padx=15, pady=(15, 2))
+        ctk.CTkLabel(hospital_section, text="• Tên bệnh viện  • Địa chỉ  • Tỉnh thành  • Hạng bệnh viện\n• Quy mô giường bệnh  • Loại hình  • Cấp quản lý", 
+                     text_color=COLORS["text_secondary"], justify="left").pack(anchor="w", padx=25, pady=(0, 10))
+
+        # Cảnh báo uy nghiêm
+        warning_frame = ctk.CTkFrame(hospital_section, fg_color="#FFF8E1", border_width=1, border_color="#FF8F00", corner_radius=6)
+        warning_frame.pack(fill="x", padx=15, pady=(5, 15))
+        
+        ctk.CTkLabel(warning_frame, text="⚠ TIẾN TRÌNH THU THẬP TỰ ĐỘNG", font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"), text_color="#FF6F00").pack(anchor="w", padx=15, pady=(10, 2))
+        ctk.CTkLabel(warning_frame, text="Hệ thống sẽ tự động quét và bóc tách toàn bộ dữ liệu từ Bệnh án điện tử Bộ Y Tế.\nNguồn dữ liệu: https://benhandientu.moh.gov.vn/", 
+                     font=ctk.CTkFont(size=13), text_color="#E65100", justify="left").pack(anchor="w", padx=15, pady=(2, 10))
+
+        # Output uy nghiêm
+        hospital_output_section = ctk.CTkFrame(self.hospital_frame, fg_color=COLORS["surface_light"], border_width=1, border_color=COLORS["border"], corner_radius=8)
+        hospital_output_section.pack(fill="x", padx=12, pady=(0, 8))
+        
+        ctk.CTkLabel(hospital_output_section, text="CẤU TRÚC LƯU TRỮ DỮ LIỆU", font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"), text_color=COLORS["primary_dark"]).pack(anchor="w", padx=15, pady=(12, 5))
+        
+        path_frame = ctk.CTkFrame(hospital_output_section, fg_color=COLORS["input_bg"], corner_radius=6)
+        path_frame.pack(fill="x", padx=15, pady=(0, 15))
+        # Row 1: Thư mục gốc
+        row1 = ctk.CTkFrame(path_frame, fg_color="transparent")
+        row1.pack(fill="x", padx=10, pady=(10, 2))
+        icon_folder = self.icon_lib.get_icon("folder", 16, COLORS["primary_dark"], COLORS["primary_light"])
+        ctk.CTkLabel(row1, text=" [Thư mục bạn chọn]", image=icon_folder, compound="left", font=ctk.CTkFont(family="Consolas", size=13, weight="bold"), text_color=COLORS["text"]).pack(anchor="w")
+
+        # Row 2: Thư mục con
+        row2 = ctk.CTkFrame(path_frame, fg_color="transparent")
+        row2.pack(fill="x", padx=10, pady=2)
+        ctk.CTkLabel(row2, text="└── ", font=ctk.CTkFont(family="Consolas", size=13), text_color=COLORS["text_secondary"]).pack(side="left")
+        ctk.CTkLabel(row2, text=" Danh sách Tham gia Bệnh án điện tử (Hệ thống tạo tự động)", image=icon_folder, compound="left", font=ctk.CTkFont(family="Consolas", size=13, weight="bold"), text_color=COLORS["text"]).pack(side="left")
+
+        # Row 3: File Excel
+        row3 = ctk.CTkFrame(path_frame, fg_color="transparent")
+        row3.pack(fill="x", padx=10, pady=(2, 10))
+        icon_file = self.icon_lib.get_icon("description", 16, "#107C41", "#107C41") # Excel green color
+        ctk.CTkLabel(row3, text="    └── ", font=ctk.CTkFont(family="Consolas", size=13), text_color=COLORS["text_secondary"]).pack(side="left")
+        ctk.CTkLabel(row3, text=" Benh_An_Dien_Tu_<ngày_tháng_năm_giờ_phút_giây>.xlsx", image=icon_file, compound="left", font=ctk.CTkFont(family="Consolas", size=13), text_color=COLORS["text"]).pack(side="left")
         
         # Tab 4 Content (RFQ)
         self.rfq_frame = ctk.CTkFrame(self.tab_rfq, fg_color="transparent")
@@ -724,7 +776,7 @@ class ScraperApp(ctk.CTk):
 
     def on_tab_change(self):
         current = self.tab_view.get()
-        if current in ["Kết Quả Đấu Thầu", "Yêu cầu báo giá"]:
+        if current in ["Kết Quả Đấu Thầu", "Yêu cầu báo giá", "Bệnh Án Điện Tử"]:
             self.lbl_path.configure(text="Folder Save Path:")
             # Remove filename if present (User request: No initialFile)
             curr_val = self.path_entry.get()
@@ -791,9 +843,9 @@ class ScraperApp(ctk.CTk):
     def browse_file(self):
         current_tab = self.tab_view.get()
         
-        if current_tab in ["Kết Quả Đấu Thầu", "Yêu cầu báo giá"]:
-            # For Contractor and RFQ mode, we select a FOLDER
-            folder_selected = filedialog.askdirectory(title="Select Folder to Save Data")
+        if current_tab in ["Kết Quả Đấu Thầu", "Yêu cầu báo giá", "Bệnh Án Điện Tử"]:
+            # For Contractor, RFQ and Hospital mode, we select a FOLDER
+            folder_selected = filedialog.askdirectory(title="Chọn thư mục lưu dữ liệu")
             if folder_selected:
                 self.path_entry.delete(0, tk.END)
                 self.path_entry.insert(0, folder_selected)
@@ -850,7 +902,7 @@ class ScraperApp(ctk.CTk):
             messagebox.showerror("Error", "Please specify a save path!")
             return
 
-        # Handle Folder Logic for Contractor Tab and RFQ Tab
+        # Handle Folder Logic for Contractor Tab, RFQ Tab, and Hospital Tab
         current_tab = self.tab_view.get()
         if current_tab in ["Kết Quả Đấu Thầu", "Yêu cầu báo giá"]:
              if current_tab == "Kết Quả Đấu Thầu":
@@ -898,6 +950,29 @@ class ScraperApp(ctk.CTk):
                                os.makedirs(full_folder_path, exist_ok=True)
                                output_path = os.path.join(full_folder_path, file_name)
                            except: pass
+
+        elif current_tab == "Bệnh Án Điện Tử":
+            if not os.path.isdir(output_path):
+                # If user typed a .xlsx path, use its parent as folder
+                if output_path.endswith(".xlsx"):
+                    output_path = os.path.dirname(output_path)
+                if not output_path or not os.path.isdir(output_path):
+                    output_path = os.getcwd()
+            
+            # Validate parent folder exists
+            if not os.path.isdir(output_path):
+                messagebox.showerror("Error", "Thư mục không tồn tại! Vui lòng chọn lại.")
+                return
+            
+            # Create subfolder
+            folder_name = "Danh sach Tham gia Bệnh án điện tử"
+            full_folder_path = os.path.join(output_path, folder_name)
+            try:
+                os.makedirs(full_folder_path, exist_ok=True)
+                output_path = full_folder_path  # Pass the new subfolder to the scraper
+            except Exception as e:
+                messagebox.showerror("Error", f"Không thể tạo thư mục: {e}")
+                return
 
 
 
@@ -980,6 +1055,8 @@ class ScraperApp(ctk.CTk):
                 messagebox.showerror("Lỗi", "Vui lòng nhập từ khóa tìm kiếm!", parent=self)
                 self.reset_ui()
                 return 
+        elif current_tab == "Bệnh Án Điện Tử":
+            mode = "HOSPITAL"
 
         # Threading
         use_default_kw = use_default_keywords if mode == "CONTRACTOR" else True
@@ -1052,6 +1129,18 @@ class ScraperApp(ctk.CTk):
                 self.status_label.configure(text="Completed", text_color=COLORS["success"])
                 self.status_dot.configure(text_color=COLORS["success"])
                 messagebox.showinfo("Success", f"Data scraped successfully to:\n{output_path}")
+                return
+            elif mode == "HOSPITAL":
+                scrape_muasamcong.run_hospital_scrape(
+                    output_folder=output_path,
+                    pause_event=self.pause_event,
+                    stop_event=self.stop_event
+                )
+                print("\n>>> COMPLETED SUCCESSFULLY!")
+                self.timer_running = False
+                self.status_label.configure(text="Completed", text_color=COLORS["success"])
+                self.status_dot.configure(text_color=COLORS["success"])
+                messagebox.showinfo("Success", f"Dữ liệu bệnh viện đã lưu thành công vào:\n{output_path}")
                 return
             else:
                 ministries_to_scrape = []
