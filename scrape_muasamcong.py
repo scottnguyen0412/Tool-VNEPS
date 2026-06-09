@@ -811,11 +811,6 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                     def format_date_str(iso_str):
                         if not iso_str: return ""
                         try:
-                            # Handle ISO format. "2026-01-16T11:21:49.875"
-                            # We can just split T and take string parts if simple, or use datetime
-                            # Let's use string manipulation for speed and robustness against variations
-                            # Or strict parsing if preferred.
-                            # Standard ISO: YYYY-MM-DDTHH:MM:SS
                             
                             if "T" in iso_str:
                                 p1, p2 = iso_str.split("T")
@@ -828,13 +823,44 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                         except:
                             return iso_str
 
+                    def fmt_num(v): 
+                        if v is None or v == "": return ""
+                        if isinstance(v, list): 
+                            if len(v) > 0: v = v[0]
+                            else: return ""
+                        try: return "{:,.0f}".format(float(v)).replace(",", ".")
+                        except: return str(v)
+                        
+                    def format_only_date(iso_str):
+                        if not iso_str: return ""
+                        try:
+                            if "T" in str(iso_str):
+                                y, m, d = str(iso_str).split("T")[0].split("-")
+                                return f"{d}/{m}/{y}"
+                            elif " " in str(iso_str):
+                                y, m, d = str(iso_str).split(" ")[0].split("-")
+                                return f"{d}/{m}/{y}"
+                            elif "-" in str(iso_str):
+                                y, m, d = str(iso_str).split("-")
+                                return f"{d}/{m}/{y}"
+                            return str(iso_str)
+                        except:
+                            return str(iso_str)
+
+                    win_price = fmt_num(item.get("bidWinningPrice"))
+                    approve_date = format_only_date(item.get("publicDateKqlcnt"))
+
                     row = {
                         "Mã TBMT": item.get("notifyNo", ""),
+                        "Tên gói thầu": bid_name,
+                        "Lĩnh vực": inv_field,
                         "Chủ đầu tư": item.get("investorName", ""),
                         "Địa điểm": loc_str,
                         "Thời điểm đóng thầu": format_date_str(item.get("bidCloseDate", "")),
                         "Thời điểm mở thầu": format_date_str(item.get("bidOpenDate", "")), # Added for Phase 2 Fallback
                         "Trạng thái": trang_thai,
+                        "Giá trúng thầu (VND)": fmt_num(item.get("bidWinningPrice")),
+                        "Ngày phê duyệt KQLCNT": format_only_date(item.get("publicDateKqlcnt")),
                         "id": item.get("id", ""),
                         "bidID": item.get("bidId", ""), 
                         "inputResultId": item.get("inputResultId", "") 
