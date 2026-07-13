@@ -797,15 +797,35 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                     hinh_thuc = "Qua mạng" if str(is_net) == "1" else "Không qua mạng"
                     
                     # Status
-                    st_code = item.get("status", "")
+                    st_code = item.get("statusForNotify", "")
                     st_map = {
-                        "01": "Chưa đóng thầu",
-                        "03": "Đã hủy thầu",
-                        "OPEN_BID": "Đang xét thầu", 
-                        "IS_PUBLISH": "Có nhà trúng thầu",
-                        "CANCEL_BID": "Đã hủy thầu"
+                        "DXT": "Đang xét thầu",
+                        "CNTTT": "Có nhà thầu trúng thầu",
+                        "DHTBMT": "Đã hủy TBMT", 
+                        "DHT": "Đã hủy thầu",
+                        "KCNTTT": "Không có nhà thầu trúng thầu"
                     }
-                    trang_thai = st_map.get(str(st_code), str(st_code))
+                    
+                    if not st_code:
+                        bid_close_str = item.get("bidCloseDate")
+                        if bid_close_str:
+                            try:
+                                # Parse ISO date to datetime (e.g. 2026-07-13T10:00:00)
+                                close_dt_str = str(bid_close_str)[:19].replace("T", " ")
+                                close_dt = datetime.strptime(close_dt_str, "%Y-%m-%d %H:%M:%S")
+                                if close_dt > datetime.now():
+                                    trang_thai = "Chưa đóng thầu"
+                                else:
+                                    if str(item.get("isInternet", "1")) == "0":
+                                        trang_thai = "Đang xét thầu"
+                                    else:
+                                        trang_thai = "Chưa mở thầu"
+                            except:
+                                trang_thai = "Chưa đóng thầu"
+                        else:
+                            trang_thai = "Chưa đóng thầu"
+                    else:
+                        trang_thai = st_map.get(str(st_code), str(st_code))
 
                     # Date Formatting
                     def format_date_str(iso_str):
@@ -826,7 +846,11 @@ def run_contractor_selection(output_path=None, keywords="", exclude_words="", fr
                     def fmt_num(v): 
                         if v is None or v == "": return ""
                         if isinstance(v, list): 
-                            if len(v) > 0: v = v[0]
+                            if len(v) > 0: 
+                                try:
+                                    v = sum(float(x) for x in v if x is not None and str(x).strip() != "")
+                                except:
+                                    v = v[0]
                             else: return ""
                         try: return "{:,.0f}".format(float(v)).replace(",", ".")
                         except: return str(v)
@@ -2236,7 +2260,7 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
         except Exception as e:
             print(f"Warning: could not read existing file: {e}")
     
-    keywords = ["y tế", "bệnh viện"]
+    keywords = ["y tế", "bệnh viện", "bệnh tật"]
     
     headers = {
         "Content-Type": "application/json",
@@ -2256,6 +2280,7 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
         # All Mode
         tasks.append(("All", None, "y tế"))
         tasks.append(("All", None, "bệnh viện"))
+        tasks.append(("All", None, "bệnh tật"))
     else:
         # Ministry Mode
         # Build Name->Code map with validation
@@ -2382,9 +2407,10 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
                     org_code = item.get("orgCode")
                     if not org_code: continue
                     
-                    if str(org_code) in processed_org_codes:
-                        # print(f"    Skipping duplicate {org_code}")
-                        continue
+                    # Check trùng lặp sử dụng Mã định danh
+                    # if str(org_code) in processed_org_codes:
+                    #     # print(f"    Skipping duplicate {org_code}")
+                    #     continue
                     
                     # API 2: Detail
                     url_2 = "https://muasamcong.mpi.gov.vn/o/egp-portal-investor-approved-v2/services/um/org/get-detail-info"
