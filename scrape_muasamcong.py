@@ -2260,7 +2260,7 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
         except Exception as e:
             print(f"Warning: could not read existing file: {e}")
     
-    keywords = ["y tế", "bệnh viện", "bệnh tật"]
+    keywords = ["y tế", "bệnh"]
     
     headers = {
         "Content-Type": "application/json",
@@ -2279,8 +2279,7 @@ def run_investor_scan_api(output_path=None, pause_event=None, stop_event=None, m
     if not ministries:
         # All Mode
         tasks.append(("All", None, "y tế"))
-        tasks.append(("All", None, "bệnh viện"))
-        tasks.append(("All", None, "bệnh tật"))
+        tasks.append(("All", None, "bệnh"))
     else:
         # Ministry Mode
         # Build Name->Code map with validation
